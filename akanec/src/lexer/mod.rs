@@ -8,7 +8,7 @@ use anyhow::{
 pub enum Token {
     Eof,
     Ident(String),
-    Number(String),
+    Num(String),
     OpCode(String),
     Equal,
     LParen,
@@ -49,7 +49,7 @@ fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) {
 
 fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
     assume_keyword_or_ident(chars)
-    .or(assume_number(chars))
+    .or(assume_num(chars))
     .or(assume_paren(chars))
     .or(assume_symbol_or_op_code(chars))
 }
@@ -67,13 +67,13 @@ fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> 
     }
 }
 
-fn assume_number(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
-    if is_number(chars.peek()) {
+fn assume_num(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
+    if is_num(chars.peek()) {
         let mut token = String::from(chars.next().unwrap());
-        while is_number(chars.peek()) {
+        while is_num(chars.peek()) {
             token.push(chars.next().unwrap());
         }
-        Some(Token::Number(token))
+        Some(Token::Num(token))
     }
     else {
         None
@@ -125,7 +125,7 @@ fn is_ident_tail(c: Option<&char>) -> bool {
     c.map_or(false, |c| *c == '_' || c.is_alphanumeric())
 }
 
-fn is_number(c: Option<&char>) -> bool {
+fn is_num(c: Option<&char>) -> bool {
     c.map_or(false, |c| c.is_numeric())
 }
 
@@ -184,9 +184,9 @@ mod tests {
     }
 
     #[test]
-    fn lex_number() {
-        assert_eq!(lex("0".to_owned()).unwrap(), &[Token::Number("0".to_owned()), Token::Eof]);
-        assert_eq!(lex("1234567890".to_owned()).unwrap(), &[Token::Number("1234567890".to_owned()), Token::Eof]);
+    fn lex_num() {
+        assert_eq!(lex("0".to_owned()).unwrap(), &[Token::Num("0".to_owned()), Token::Eof]);
+        assert_eq!(lex("1234567890".to_owned()).unwrap(), &[Token::Num("1234567890".to_owned()), Token::Eof]);
     }
 
     #[test]
