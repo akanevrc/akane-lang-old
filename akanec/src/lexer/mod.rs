@@ -19,12 +19,12 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
     loop {
-        if let Some(token) = assume_eof(&mut chars) {
+        if let Some(token) = assume_eof(&mut chars)? {
             tokens.push(token);
             return Ok(tokens);
         }
         assume_whitespace(&mut chars);
-        if let Some(token) = assume_token(&mut chars) {
+        if let Some(token) = assume_token(&mut chars)? {
             tokens.push(token);
             continue;
         }
@@ -32,84 +32,87 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
     }
 }
 
-fn assume_eof(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
+fn assume_eof(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     if chars.peek().is_none() {
-        Some(Token::Eof)
+        Ok(Some(Token::Eof))
     }
     else {
-        None
+        Ok(None)
     }
 }
 
-fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) {
+fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<()> {
     while is_whitespace(chars.peek()) {
         chars.next();
     }
+    Ok(())
 }
 
-fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
-    assume_keyword_or_ident(chars)
-    .or(assume_num(chars))
-    .or(assume_paren(chars))
-    .or(assume_symbol_or_op_code(chars))
+fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
+    Ok(
+        assume_keyword_or_ident(chars)?
+        .or(assume_num(chars)?)
+        .or(assume_paren(chars)?)
+        .or(assume_symbol_or_op_code(chars)?)
+    )
 }
 
-fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
+fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     if is_ident_head(chars.peek()) {
         let mut token = String::from(chars.next().unwrap());
         while is_ident_tail(chars.peek()) {
             token.push(chars.next().unwrap());
         }
-        Some(Token::Ident(token))
+        Ok(Some(Token::Ident(token)))
     }
     else {
-        None
+        Ok(None)
     }
 }
 
-fn assume_num(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
+fn assume_num(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     if is_num(chars.peek()) {
         let mut token = String::from(chars.next().unwrap());
         while is_num(chars.peek()) {
             token.push(chars.next().unwrap());
         }
-        Some(Token::Num(token))
+        Ok(Some(Token::Num(token)))
     }
     else {
-        None
+        Ok(None)
     }
 }
 
-fn assume_paren(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
+fn assume_paren(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     let c = chars.peek();
     if is_l_paren(c) {
         chars.next();
-        Some(Token::LParen)
+        Ok(Some(Token::LParen))
     }
     else if is_r_paren(c) {
         chars.next();
-        Some(Token::RParen)
+        Ok(Some(Token::RParen))
     }
     else {
-        None
+        Ok(None)
     }
 }
 
-fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) -> Option<Token> {
+fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     if is_op_code(chars.peek()) {
         let mut token = String::from(chars.next().unwrap());
         while is_op_code(chars.peek()) {
             token.push(chars.next().unwrap());
         }
         if is_equal(&mut token) {
-            Some(Token::Equal)
+            Ok(Some(Token::Equal))
         }
         else {
-            Some(Token::OpCode(token))
+            Ok(Some(Token::OpCode(token)))
         }
     }
     else {
-        None
+        Ok(None)
     }
 }
 
