@@ -23,7 +23,7 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
             tokens.push(token);
             return Ok(tokens);
         }
-        assume_whitespace(&mut chars);
+        assume_whitespace(&mut chars)?;
         if let Some(token) = assume_token(&mut chars)? {
             tokens.push(token);
             continue;
