@@ -4,7 +4,7 @@ use anyhow::{
     Result,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Eof,
     Ident(String),
