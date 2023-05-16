@@ -170,3 +170,37 @@ fn parse_infix_op() {
         )]
     );
 }
+
+#[test]
+fn parse_paren() {
+    assert_eq!(
+        parse("f = (a + b) + c"),
+        &[fn_def_ast(
+            left_def_ast(ident_ast("f"), vec![]),
+            infix_op_expr_ast(infix_op_ast(
+                "+",
+                infix_op_expr_ast(infix_op_ast(
+                    "+",
+                    ident_expr_ast(ident_ast("a")),
+                    ident_expr_ast(ident_ast("b"))
+                )),
+                ident_expr_ast(ident_ast("c"))
+            ))
+        )]
+    );
+    assert_eq!(
+        parse("f = a + (b + c)"),
+        &[fn_def_ast(
+            left_def_ast(ident_ast("f"), vec![]),
+            infix_op_expr_ast(infix_op_ast(
+                "+",
+                ident_expr_ast(ident_ast("a")),
+                infix_op_expr_ast(infix_op_ast(
+                    "+",
+                    ident_expr_ast(ident_ast("b")),
+                    ident_expr_ast(ident_ast("c"))
+                ))
+            ))
+        )]
+    );
+}

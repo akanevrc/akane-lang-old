@@ -166,11 +166,18 @@ fn assume_infix_op_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Re
 }
 
 fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
-    Ok(
-        assume_paren(tokens)?
-        .or(assume_ident(tokens)?.map(ExprAst::Ident))
-        .or(assume_num(tokens)?.map(ExprAst::Num))
-    )
+    if let Some(expr) = assume_paren(tokens)? {
+        Ok(Some(expr))
+    }
+    else if let Some(ident) = assume_ident(tokens)? {
+        Ok(Some(ExprAst::Ident(ident)))
+    }
+    else if let Some(num) = assume_num(tokens)? {
+        Ok(Some(ExprAst::Num(num)))
+    }
+    else {
+        Ok(None)
+    }
 }
 
 fn assume_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>>  {

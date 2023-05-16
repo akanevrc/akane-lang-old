@@ -52,12 +52,21 @@ fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result
 }
 
 fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    Ok(
-        assume_keyword_or_ident(chars)?
-        .or(assume_num(chars)?)
-        .or(assume_paren(chars)?)
-        .or(assume_symbol_or_op_code(chars)?)
-    )
+    if let Some(token) = assume_keyword_or_ident(chars)? {
+        Ok(Some(token))
+    }
+    else if let Some(token) = assume_num(chars)? {
+        Ok(Some(token))
+    }
+    else if let Some(token) = assume_paren(chars)? {
+        Ok(Some(token))
+    }
+    else if let Some(token) = assume_symbol_or_op_code(chars)? {
+        Ok(Some(token))
+    }
+    else {
+        Ok(None)
+    }
 }
 
 fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {

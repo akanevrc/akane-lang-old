@@ -59,9 +59,31 @@ fn lex_paren() {
 }
 
 #[test]
-fn symbol_or_op_code() {
+fn lex_symbol_or_op_code() {
     assert_eq!(lex("="), &[equal(), eof()]);
     assert_eq!(lex("=="), &[op_code("=="), eof()]);
     assert_eq!(lex("+"), &[op_code("+"), eof()]);
     assert_eq!(lex(">>="), &[op_code(">>="), eof()]);
+}
+
+#[test]
+fn lex_statement() {
+    assert_eq!(
+        lex("f a b c = a >>= (b >>= c)"),
+        &[
+            ident("f"),
+            ident("a"),
+            ident("b"),
+            ident("c"),
+            equal(),
+            ident("a"),
+            op_code(">>="),
+            l_paren(),
+            ident("b"),
+            op_code(">>="),
+            ident("c"),
+            r_paren(),
+            eof(),
+        ]
+    );
 }
