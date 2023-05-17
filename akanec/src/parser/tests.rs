@@ -46,8 +46,8 @@ fn fn_ast(fn_expr: ExprAst, arg_expr: ExprAst) -> FnAst {
     FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr) }
 }
 
-fn prefix_op_ast() -> PrefixOpAst {
-    panic!("Not implemented.");
+fn prefix_op_ast(op_code: &str, rhs: ExprAst) -> PrefixOpAst {
+    PrefixOpAst { op_code: op_code.to_owned(), rhs: Rc::new(rhs) }
 }
 
 fn infix_op_ast(op_code: &str, lhs: ExprAst, rhs: ExprAst) -> InfixOpAst {
@@ -201,6 +201,30 @@ fn parse_paren() {
                     ident_expr_ast(ident_ast("c"))
                 ))
             ))
+        )]
+    );
+}
+
+#[test]
+fn parse_prefix_op() {
+    assert_eq!(
+        parse("f = -1"),
+        &[fn_def_ast(
+            left_def_ast(ident_ast("f"), vec![]),
+            prefix_op_expr_ast(prefix_op_ast("-", num_expr_ast(num_ast("1"))))
+        )]
+    );
+    assert_eq!(
+        parse("f = -a + 1"),
+        &[fn_def_ast(
+            left_def_ast(ident_ast("f"), vec![]),
+            infix_op_expr_ast(
+                infix_op_ast(
+                    "+",
+                    prefix_op_expr_ast(prefix_op_ast("-", ident_expr_ast(ident_ast("a")))),
+                    num_expr_ast(num_ast("1"))
+                )
+            )
         )]
     );
 }

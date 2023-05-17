@@ -126,7 +126,7 @@ fn assume_equal(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Op
 }
 
 fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
-    if let Some(lhs) = assume_term(tokens)? {
+    if let Some(lhs) = assume_prefix_op_lhs(tokens)? {
         let mut lhs = lhs;
         while let Some((op_code, rhs)) = assume_infix_op_rhs(tokens)? {
             lhs = ExprAst::InfixOp(InfixOpAst { op_code, lhs: Rc::new(lhs), rhs: Rc::new(rhs) });
@@ -144,6 +144,26 @@ fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
         while let Some(f) = assume_factor(tokens)? {
             term = ExprAst::Fn(FnAst { fn_expr: Rc::new(term), arg_expr: Rc::new(f) })
         }
+        Ok(Some(term))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
+    if let Some(Token::OpCode(op_code)) = tokens.peek() {
+        let op_code = op_code.to_owned();
+        if op_code == "-" {
+            tokens.next();
+            if let Some(term) = assume_term(tokens)? {
+                return Ok(Some(ExprAst::PrefixOp(PrefixOpAst { op_code, rhs: Rc::new(term) })))
+            }
+            bail!("Term required.");
+        }
+        Ok(None)
+    }
+    else if let Some(term) = assume_term(tokens)? {
         Ok(Some(term))
     }
     else {
@@ -217,8 +237,4 @@ fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     else {
         Ok(None)
     }
-}
-
-fn assume_prefix_op(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<PrefixOpAst>> {
-    panic!("Not implemented.");
 }
