@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::iter::Peekable;
-use std::rc::Rc;
+use std::{
+    iter::Peekable,
+    rc::Rc,
+};
 use anyhow::{
     bail,
     Result,
