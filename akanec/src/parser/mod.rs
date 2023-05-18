@@ -13,14 +13,14 @@ use crate::lexer::Token;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnDefAst {
-    left_def: LeftDefAst,
-    expr: ExprAst,
+    pub left_def: LeftDefAst,
+    pub expr: ExprAst,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LeftDefAst {
-    ident: IdentAst,
-    args: Vec<IdentAst>,
+    pub ident: IdentAst,
+    pub args: Vec<IdentAst>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -34,31 +34,31 @@ pub enum ExprAst {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnAst {
-    fn_expr: Rc<ExprAst>,
-    arg_expr: Rc<ExprAst>,
+    pub fn_expr: Rc<ExprAst>,
+    pub arg_expr: Rc<ExprAst>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PrefixOpAst {
-    op_code: String,
-    rhs: Rc<ExprAst>,
+    pub op_code: String,
+    pub rhs: Rc<ExprAst>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InfixOpAst {
-    op_code: String,
-    lhs: Rc<ExprAst>,
-    rhs: Rc<ExprAst>,
+    pub op_code: String,
+    pub lhs: Rc<ExprAst>,
+    pub rhs: Rc<ExprAst>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentAst {
-    name: String,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct NumAst {
-    value: String,
+    pub value: String,
 }
 
 pub fn parse(input: Vec<Token>) -> Result<Vec<FnDefAst>> {
