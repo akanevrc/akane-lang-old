@@ -26,7 +26,9 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
             tokens.push(token);
             return Ok(tokens);
         }
-        assume_whitespace(&mut chars)?;
+        if let Some(_) = assume_whitespace(&mut chars)? {
+            continue;
+        }
         if let Some(token) = assume_token(&mut chars)? {
             tokens.push(token);
             continue;
@@ -44,11 +46,18 @@ fn assume_eof(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option
     }
 }
 
-fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<()> {
+fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<()>> {
+    let mut consumed = false;
     while is_whitespace(chars.peek()) {
         chars.next();
+        consumed = true;
     }
-    Ok(())
+    if consumed {
+        Ok(Some(()))
+    }
+    else {
+        Ok(None)
+    }
 }
 
 fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
