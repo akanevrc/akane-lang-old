@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use super::{
+use crate::data::ast::{
     FnDefAst,
     LeftDefAst,
     ExprAst,

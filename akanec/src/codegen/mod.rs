@@ -3,17 +3,19 @@ use anyhow::{
     Result,
 };
 use llvm_sys::prelude::LLVMValueRef;
-use crate::parser::{
-    FnDefAst,
-    LeftDefAst,
-    ExprAst,
-    FnAst,
-    PrefixOpAst,
-    InfixOpAst,
-    IdentAst,
-    NumAst,
+use crate::{
+    data::ast::{
+        FnDefAst,
+        LeftDefAst,
+        ExprAst,
+        FnAst,
+        PrefixOpAst,
+        InfixOpAst,
+        IdentAst,
+        NumAst,
+    },
+    llvm::LLVM,
 };
-use crate::llvm::LLVM;
 
 pub fn compile(llvm: &mut LLVM, fn_def_asts: &Vec<FnDefAst>) -> Result<()> {
     for fn_def_ast in fn_def_asts {

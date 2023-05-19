@@ -6,17 +6,7 @@ use anyhow::{
     bail,
     Result,
 };
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Token {
-    Eof,
-    Ident(String),
-    Num(String),
-    OpCode(String),
-    Equal,
-    LParen,
-    RParen,
-}
+use crate::data::token::Token;
 
 pub fn lex(input: String) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();

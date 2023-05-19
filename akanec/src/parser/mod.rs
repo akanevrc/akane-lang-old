@@ -9,57 +9,19 @@ use anyhow::{
     bail,
     Result,
 };
-use crate::lexer::Token;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FnDefAst {
-    pub left_def: LeftDefAst,
-    pub expr: ExprAst,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct LeftDefAst {
-    pub ident: IdentAst,
-    pub args: Vec<IdentAst>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ExprAst {
-    Fn(FnAst),
-    PrefixOp(PrefixOpAst),
-    InfixOp(InfixOpAst),
-    Ident(IdentAst),
-    Num(NumAst),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FnAst {
-    pub fn_expr: Rc<ExprAst>,
-    pub arg_expr: Rc<ExprAst>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PrefixOpAst {
-    pub op_code: String,
-    pub rhs: Rc<ExprAst>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct InfixOpAst {
-    pub op_code: String,
-    pub lhs: Rc<ExprAst>,
-    pub rhs: Rc<ExprAst>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct IdentAst {
-    pub name: String,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct NumAst {
-    pub value: String,
-}
+use crate::data::{
+    token::Token,
+    ast::{
+        FnDefAst,
+        LeftDefAst,
+        ExprAst,
+        FnAst,
+        PrefixOpAst,
+        InfixOpAst,
+        IdentAst,
+        NumAst,
+    },
+};
 
 pub fn parse(input: Vec<Token>) -> Result<Vec<FnDefAst>> {
     let mut asts = Vec::new();
