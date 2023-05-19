@@ -4,18 +4,25 @@ mod parser;
 mod llvm;
 mod codegen;
 
-use std::{
-    env,
-    fs
-};
+use std::fs;
 use anyhow::Result;
-use llvm::LLVM;
+use clap::Parser;
+use self::llvm::LLVM;
+
+#[derive(Parser, Debug)]
+#[command(name = "akanec", author, version, about, long_about = None)]
+struct Args {
+    /// Input file path
+    input: String,
+
+    /// Output file path
+    #[arg(short, long, default_value = "./a.ll")]
+    output: String,
+}
 
 fn main() -> Result<()> {
-    let mut args = env::args().skip(1);
-    let in_path = args.next().unwrap();
-    let out_path = args.next().unwrap();
-    compile(&in_path, &out_path)?;
+    let args = Args::parse();
+    compile(&args.input, &args.output)?;
     Ok(())
 }
 
