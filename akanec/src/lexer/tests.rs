@@ -43,7 +43,7 @@ fn lex_eof() {
 
 #[test]
 fn lex_semicolon() {
-    assert_eq!(lex(";"), &[semicolon()]);
+    assert_eq!(lex(";"), &[semicolon(), eof()]);
 }
 
 #[test]

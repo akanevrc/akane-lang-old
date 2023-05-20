@@ -13,8 +13,10 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
     let mut chars = input.chars().peekable();
     loop {
         if let Some(token) = assume_eof(&mut chars)? {
-            if tokens.last() != Some(&Token::Semicolon) {
-                tokens.push(Token::Semicolon);
+            if let Some(last) = tokens.last() {
+                if *last != Token::Semicolon {
+                    tokens.push(Token::Semicolon);
+                }
             }
             tokens.push(token);
             return Ok(tokens);
