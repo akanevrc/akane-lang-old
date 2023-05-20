@@ -4,6 +4,9 @@ mod parser;
 mod llvm;
 mod codegen;
 
+#[cfg(test)]
+mod tests;
+
 use std::fs;
 use anyhow::Result;
 use clap::Parser;
