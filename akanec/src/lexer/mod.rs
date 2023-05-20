@@ -13,6 +13,9 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
     let mut chars = input.chars().peekable();
     loop {
         if let Some(token) = assume_eof(&mut chars)? {
+            if tokens.last() != Some(&Token::Semicolon) {
+                tokens.push(Token::Semicolon);
+            }
             tokens.push(token);
             return Ok(tokens);
         }
@@ -51,7 +54,10 @@ fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result
 }
 
 fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if let Some(token) = assume_keyword_or_ident(chars)? {
+    if let Some(token) = assume_semicolon(chars)? {
+        Ok(Some(token))
+    }
+    else if let Some(token) = assume_keyword_or_ident(chars)? {
         Ok(Some(token))
     }
     else if let Some(token) = assume_num(chars)? {
@@ -62,6 +68,16 @@ fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Opti
     }
     else if let Some(token) = assume_symbol_or_op_code(chars)? {
         Ok(Some(token))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_semicolon(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
+    if is_semicolon(chars.peek()) {
+        chars.next();
+        Ok(Some(Token::Semicolon))
     }
     else {
         Ok(None)
@@ -129,6 +145,10 @@ fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) ->
 
 fn is_whitespace(c: Option<&char>) -> bool {
     c.map_or(false, |c| c.is_whitespace())
+}
+
+fn is_semicolon(c: Option<&char>) -> bool {
+    c.map_or(false, |c| *c == ';')
 }
 
 fn is_ident_head(c: Option<&char>) -> bool {

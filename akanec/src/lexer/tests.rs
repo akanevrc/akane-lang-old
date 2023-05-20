@@ -8,6 +8,10 @@ fn eof() -> Token {
     Token::Eof
 }
 
+fn semicolon() -> Token {
+    Token::Semicolon
+}
+
 fn ident(s: &str) -> Token {
     Token::Ident(s.to_owned())
 }
@@ -38,32 +42,37 @@ fn lex_eof() {
 }
 
 #[test]
+fn lex_semicolon() {
+    assert_eq!(lex(";"), &[semicolon()]);
+}
+
+#[test]
 fn lex_keyword_or_ident() {
-    assert_eq!(lex("_"), &[ident("_"), eof()]);
-    assert_eq!(lex("a"), &[ident("a"), eof()]);
-    assert_eq!(lex("A"), &[ident("A"), eof()]);
-    assert_eq!(lex("あ"), &[ident("あ"), eof()]);
-    assert_eq!(lex("AbcDef_123"), &[ident("AbcDef_123"), eof()]);
+    assert_eq!(lex("_"), &[ident("_"), semicolon(), eof()]);
+    assert_eq!(lex("a"), &[ident("a"), semicolon(), eof()]);
+    assert_eq!(lex("A"), &[ident("A"), semicolon(), eof()]);
+    assert_eq!(lex("あ"), &[ident("あ"), semicolon(), eof()]);
+    assert_eq!(lex("AbcDef_123"), &[ident("AbcDef_123"), semicolon(), eof()]);
 }
 
 #[test]
 fn lex_num() {
-    assert_eq!(lex("0"), &[num("0"), eof()]);
-    assert_eq!(lex("1234567890"), &[num("1234567890"), eof()]);
+    assert_eq!(lex("0"), &[num("0"), semicolon(), eof()]);
+    assert_eq!(lex("1234567890"), &[num("1234567890"), semicolon(), eof()]);
 }
 
 #[test]
 fn lex_paren() {
-    assert_eq!(lex("("), &[l_paren(), eof()]);
-    assert_eq!(lex(")"), &[r_paren(), eof()]);
+    assert_eq!(lex("("), &[l_paren(), semicolon(), eof()]);
+    assert_eq!(lex(")"), &[r_paren(), semicolon(), eof()]);
 }
 
 #[test]
 fn lex_symbol_or_op_code() {
-    assert_eq!(lex("="), &[equal(), eof()]);
-    assert_eq!(lex("=="), &[op_code("=="), eof()]);
-    assert_eq!(lex("+"), &[op_code("+"), eof()]);
-    assert_eq!(lex(">>="), &[op_code(">>="), eof()]);
+    assert_eq!(lex("="), &[equal(), semicolon(), eof()]);
+    assert_eq!(lex("=="), &[op_code("=="), semicolon(), eof()]);
+    assert_eq!(lex("+"), &[op_code("+"), semicolon(), eof()]);
+    assert_eq!(lex(">>="), &[op_code(">>="), semicolon(), eof()]);
 }
 
 #[test]
@@ -83,6 +92,7 @@ fn lex_statement() {
             op_code(">>="),
             ident("c"),
             r_paren(),
+            semicolon(),
             eof(),
         ]
     );

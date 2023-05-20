@@ -52,7 +52,9 @@ fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     if let Some(left_def) = assume_left_def(tokens)? {
         if let Some(_) = assume_equal(tokens)? {
             if let Some(expr) = assume_expr(tokens)? {
-                return Ok(Some(FnDefAst { left_def, expr }));
+                if let Some(_) = assume_semicolon(tokens)? {
+                    return Ok(Some(FnDefAst { left_def, expr }));
+                }
             }
             bail!("Expression required.");
         }
@@ -197,6 +199,16 @@ fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
         let value = value.to_owned();
         tokens.next();
         Ok(Some(NumAst { value }))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_semicolon(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<()>> {
+    if let Some(Token::Semicolon) = tokens.peek() {
+        tokens.next();
+        Ok(Some(()))
     }
     else {
         Ok(None)
