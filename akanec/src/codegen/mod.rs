@@ -62,9 +62,6 @@ fn gen_fn_def(llvm: &mut LLVM, fn_def_ast: &FnDefAst) -> Result<LLVMValueRef> {
 
 fn gen_left_def(llvm: &mut LLVM, left_def_ast: &LeftDefAst) -> Result<LLVMValueRef> {
     let arg_count = left_def_ast.args.len();
-    if arg_count != 1 {
-        panic!("Not implemented.");
-    }
     let int_ty = llvm.int32_type()?;
     let arg_tys = vec![int_ty; arg_count];
     let f_ty = llvm.function_type(int_ty, arg_tys)?;
