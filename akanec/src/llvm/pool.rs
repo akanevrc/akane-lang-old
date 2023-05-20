@@ -1,39 +1,49 @@
 use std::{
-    any::Any,
     collections::HashMap,
     ffi::{
         CStr,
         CString,
     },
+    pin::Pin,
 };
+use super::Ptr;
 
-pub struct Pool {
-    c_strs: HashMap<*mut dyn Any, Box<CStr>>,
-    ptr_vecs: HashMap<*mut dyn Any, Vec<*mut dyn Any>>,
+pub struct CStrPool {
+    c_strs: HashMap<*const i8, Pin<Box<CStr>>>,
 }
 
-impl Pool {
+impl CStrPool {
     pub fn new() -> Self {
-        Self {
-            c_strs: HashMap::new(),
-            ptr_vecs: HashMap::new(),
-        }
+        Self { c_strs: HashMap::new() }
     }
 
     pub fn c_str(&mut self, s: &str) -> *const i8 {
-        let mut s = CString::new(s).unwrap().into_boxed_c_str();
-        let p: *mut dyn Any = &mut s;
-        self.c_strs.insert(p, s);
-        self.c_strs.get(&p).unwrap().as_ptr()
+        let pinned = Pin::new(CString::new(s).unwrap().into_boxed_c_str());
+        let p = pinned.as_ptr();
+        self.c_strs.insert(p, pinned);
+        p
+    }
+}
+
+pub struct SlicePool<T: Ptr + Unpin> {
+    slices: HashMap<*mut T, Pin<Box<[T]>>>,
+}
+
+impl<T: Ptr + Unpin> SlicePool<T> {
+    pub fn new() -> Self {
+        Self { slices: HashMap::new() }
     }
 
-    pub fn ptr_vec<T: 'static>(&mut self, ptrs: Vec<*mut T>) -> *mut *mut T {
-        let mut v = Vec::<*mut dyn Any>::new();
-        let p: *mut dyn Any = &mut v;
-        for ptr in ptrs {
-            v.push(ptr as *mut dyn Any);
-        }
-        self.ptr_vecs.insert(p, v);
-        self.ptr_vecs.get_mut(&p).unwrap().as_mut_ptr() as *mut *mut T
+    pub fn slice(&mut self, ptrs: &[T]) -> *mut T {
+        let mut pinned =
+            Pin::new(
+                ptrs.iter()
+                .map(|ptr| *ptr)
+                .collect::<Vec<_>>()
+                .into_boxed_slice()
+            );
+        let p = pinned.as_mut_ptr();
+        self.slices.insert(p, pinned);
+        p
     }
 }

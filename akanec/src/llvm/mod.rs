@@ -6,7 +6,6 @@ use std::{
     fs,
 };
 use anyhow::{
-    anyhow,
     bail,
     Result,
 };
@@ -50,9 +49,12 @@ use llvm_sys::{
         LLVMValueRef,
     },
 };
-use pool::Pool;
+use pool::{
+    CStrPool,
+    SlicePool,
+};
 
-trait Ptr: Copy {
+pub trait Ptr: Copy {
     fn is_null(&self) -> bool;
 }
 
@@ -79,7 +81,9 @@ pub struct LLVM {
     module: LLVMModuleRef,
     builder: LLVMBuilderRef,
     named_values: HashMap<String, LLVMValueRef>,
-    pool: Pool,
+    c_str_pool: CStrPool,
+    type_slice_pool: SlicePool<LLVMTypeRef>,
+    value_slice_pool: SlicePool<LLVMValueRef>,
 }
 
 impl Drop for LLVM {
@@ -95,13 +99,20 @@ impl Drop for LLVM {
 impl LLVM {
     pub fn new(module_id: &str) -> Self {
         unsafe {
-            let mut pool = Pool::new();
-            let name = pool.c_str(module_id);
+            let mut c_str_pool = CStrPool::new();
+            let name = c_str_pool.c_str(module_id);
             let context = LLVMContextCreate();
             let module = LLVMModuleCreateWithNameInContext(name, context);
             let builder = LLVMCreateBuilderInContext(context);
-            let named_values = HashMap::new();
-            Self { context, module, builder, named_values, pool }
+            Self {
+                context,
+                module,
+                builder,
+                named_values: HashMap::new(),
+                c_str_pool,
+                type_slice_pool: SlicePool::new(),
+                value_slice_pool: SlicePool::new(),
+            }
         }
     }
 
@@ -110,9 +121,10 @@ impl LLVM {
     }
 
     pub fn get_named_value(&self, name: &str) -> Result<LLVMValueRef> {
-        self.named_values.get(name)
-        .map(|value| *value)
-        .ok_or(anyhow!("Unknown identifier."))
+        match self.named_values.get(name) {
+            Some(value) => Ok(*value),
+            None => bail!("Unknown identifier."),
+        }
     }
 
     pub fn insert_named_value(&mut self, name: String, value: LLVMValueRef) -> Result<LLVMValueRef> {
@@ -142,7 +154,7 @@ impl LLVM {
     pub fn function_type(&mut self, ret_ty: LLVMTypeRef, arg_tys: Vec<LLVMTypeRef>) -> Result<LLVMTypeRef> {
         unsafe {
             let arg_count = arg_tys.len() as u32;
-            let arg_ty_vec = self.pool.ptr_vec(arg_tys);
+            let arg_ty_vec = self.type_slice_pool.slice(&arg_tys);
             Self::ptr_to_result(
                 LLVMFunctionType(ret_ty, arg_ty_vec, arg_count, 0)
             )
@@ -168,14 +180,14 @@ impl LLVM {
 
     pub fn set_value_name(&mut self, value: LLVMValueRef, name: &str) {
         unsafe {
-            LLVMSetValueName2(value, self.pool.c_str(name), name.len())
+            LLVMSetValueName2(value, self.c_str_pool.c_str(name), name.len())
         }
     }
 
     pub fn add_function(&mut self, name: &str, fn_ty: LLVMTypeRef) -> Result<LLVMValueRef> {
         unsafe {
             Self::ptr_to_result(
-                LLVMAddFunction(self.module, self.pool.c_str(name), fn_ty)
+                LLVMAddFunction(self.module, self.c_str_pool.c_str(name), fn_ty)
             )
         }
     }
@@ -183,7 +195,7 @@ impl LLVM {
     pub fn get_named_function(&mut self, name: &str) -> Result<LLVMValueRef> {
         unsafe {
             Self::ptr_to_result(
-                LLVMGetNamedFunction(self.module, self.pool.c_str(name))
+                LLVMGetNamedFunction(self.module, self.c_str_pool.c_str(name))
             )
         }
     }
@@ -211,7 +223,7 @@ impl LLVM {
     pub fn append_basic_block(&mut self, fn_value: LLVMValueRef, name: &str) -> Result<LLVMBasicBlockRef> {
         unsafe {
             Self::ptr_to_result(
-                LLVMAppendBasicBlock(fn_value, self.pool.c_str(name))
+                LLVMAppendBasicBlock(fn_value, self.c_str_pool.c_str(name))
             )
         }
     }
@@ -231,9 +243,10 @@ impl LLVM {
     pub fn build_call(&mut self, fn_ty: LLVMTypeRef, fn_value: LLVMValueRef, args: Vec<LLVMValueRef>, name: &str) -> Result<LLVMValueRef> {
         unsafe {
             let arg_count = args.len() as u32;
-            let arg_vec = self.pool.ptr_vec(args);
+            let arg_vec = self.value_slice_pool.slice(&args);
+            let name = self.c_str_pool.c_str(name);
             Self::ptr_to_result(
-                LLVMBuildCall2(self.builder, fn_ty, fn_value, arg_vec, arg_count, self.pool.c_str(name))
+                LLVMBuildCall2(self.builder, fn_ty, fn_value, arg_vec, arg_count, name)
             )
         }
     }
@@ -241,7 +254,7 @@ impl LLVM {
     pub fn build_add(&mut self, lhs: LLVMValueRef, rhs: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
         unsafe {
             Self::ptr_to_result(
-                LLVMBuildAdd(self.builder, lhs, rhs, self.pool.c_str(name))
+                LLVMBuildAdd(self.builder, lhs, rhs, self.c_str_pool.c_str(name))
             )
         }
     }
