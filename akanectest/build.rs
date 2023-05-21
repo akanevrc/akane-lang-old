@@ -7,15 +7,11 @@ use std::{
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
 
-    if Path::new("../target/debug/akanec").exists() && Path::new("./src/tests/akane/test.akane").exists() {
-        Command::new("../target/debug/akanec")
-            .args([
-                "-o",
-                &format!("{}/test.ll", out_dir),
-                "./src/tests/akane/test.akane"
-            ])
-            .status()
-            .unwrap();
+    if Path::new("./src/tests/akane/test.akane").exists() {
+        akanec::compiler::compile(
+            "./src/tests/akane/test.akane",
+            &format!("{}/test.ll", out_dir)
+        ).unwrap();
         Command::new("llc")
             .args([
                 "--filetype",
@@ -38,5 +34,5 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out_dir);
     println!("cargo:rustc-link-lib=static=akanectest");
-    println!("cargo:rerun-if-changed=src/tests/akane/test.akane");
+    println!("cargo:rerun-if-changed={}/libakanectest.a", out_dir);
 }

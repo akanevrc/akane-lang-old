@@ -5,9 +5,6 @@ mod llvm;
 mod codegen;
 mod compiler;
 
-#[cfg(test)]
-mod tests;
-
 use anyhow::Result;
 use clap::Parser;
 
