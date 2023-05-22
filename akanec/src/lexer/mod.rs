@@ -146,7 +146,7 @@ fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) ->
 }
 
 fn is_whitespace(c: Option<&char>) -> bool {
-    c.map_or(false, |c| c.is_whitespace())
+    c.map_or(false, |c| c.is_ascii_whitespace())
 }
 
 fn is_semicolon(c: Option<&char>) -> bool {
@@ -154,7 +154,7 @@ fn is_semicolon(c: Option<&char>) -> bool {
 }
 
 fn is_ident_head(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == '_' || c.is_ascii_whitespace())
+    c.map_or(false, |c| *c == '_' || c.is_ascii_alphabetic())
 }
 
 fn is_ident_tail(c: Option<&char>) -> bool {
