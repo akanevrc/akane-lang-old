@@ -154,15 +154,15 @@ fn is_semicolon(c: Option<&char>) -> bool {
 }
 
 fn is_ident_head(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == '_' || c.is_alphabetic())
+    c.map_or(false, |c| *c == '_' || c.is_ascii_whitespace())
 }
 
 fn is_ident_tail(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == '_' || c.is_alphanumeric())
+    c.map_or(false, |c| *c == '_' || c.is_ascii_alphanumeric())
 }
 
 fn is_num(c: Option<&char>) -> bool {
-    c.map_or(false, |c| c.is_numeric())
+    c.map_or(false, |c| c.is_ascii_digit())
 }
 
 fn is_op_code(c: Option<&char>) -> bool {
