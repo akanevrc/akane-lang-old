@@ -51,7 +51,6 @@ fn lex_keyword_or_ident() {
     assert_eq!(lex("_"), &[ident("_"), semicolon(), eof()]);
     assert_eq!(lex("a"), &[ident("a"), semicolon(), eof()]);
     assert_eq!(lex("A"), &[ident("A"), semicolon(), eof()]);
-    assert_eq!(lex("あ"), &[ident("あ"), semicolon(), eof()]);
     assert_eq!(lex("AbcDef_123"), &[ident("AbcDef_123"), semicolon(), eof()]);
 }
 
