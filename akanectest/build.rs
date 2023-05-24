@@ -34,5 +34,6 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out_dir);
     println!("cargo:rustc-link-lib=static=akanectest");
+    println!("cargo:rerun-if-changed=./src/tests/akane/test.akane");
     println!("cargo:rerun-if-changed={}/libakanectest.a", out_dir);
 }
