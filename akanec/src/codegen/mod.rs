@@ -5,8 +5,9 @@ use anyhow::{
 use llvm_sys::prelude::LLVMValueRef;
 use crate::{
     data::ast::{
+        TopDefAst,
         FnDefAst,
-        LeftDefAst,
+        LeftFnDefAst,
         ExprAst,
         FnAst,
         PrefixOpAst,
@@ -17,59 +18,52 @@ use crate::{
     llvm::LLVM,
 };
 
-pub fn compile(llvm: &mut LLVM, fn_def_asts: &Vec<FnDefAst>) -> Result<()> {
-    for fn_def_ast in fn_def_asts {
-        gen_fn_def(llvm, fn_def_ast)?;
+pub fn compile(llvm: &mut LLVM, top_def_asts: &[TopDefAst]) -> Result<()> {
+    for top_def_ast in top_def_asts {
+        gen_top_def(llvm, top_def_ast)?;
     }
     Ok(())
 }
 
-fn gen_fn_def(llvm: &mut LLVM, fn_def_ast: &FnDefAst) -> Result<LLVMValueRef> {
-    let f = match llvm.get_named_function(&fn_def_ast.left_def.ident.name) {
-        Ok(f) => f,
-        Err(_) => gen_left_def(llvm, &fn_def_ast.left_def)?,
-    };
-    let block_count = LLVM::count_basic_blocks(f);
-    if block_count != 0 {
-        bail!("Function cannot be redefined.");
-    }
-    let block = llvm.append_basic_block(f, "entry")?;
-    llvm.position_builder_at_end(block);
-    llvm.clear_named_value();
-    let arg_count = fn_def_ast.left_def.args.len();
-    for i in 0..arg_count {
-        let arg = LLVM::get_param(f, i)?;
-        llvm.set_value_name(arg, &fn_def_ast.left_def.args[i].name);
-        llvm.insert_named_value(fn_def_ast.left_def.args[i].name.clone(), arg)?;
-    }
-    match gen_expr(llvm, &fn_def_ast.expr) {
-        Ok(body) => {
-            llvm.build_ret(body)?;
-            if LLVM::verify_function(f) {
-                Ok(f)
-            }
-            else {
-                LLVM::delete_function(f);
-                bail!("Invalid function.");
-            }
-        },
-        Err(e) => {
-            LLVM::delete_function(f);
-            Err(e)
-        },
+fn gen_top_def(llvm: &mut LLVM, top_def_ast: &TopDefAst) -> Result<LLVMValueRef> {
+    match top_def_ast {
+        TopDefAst::Fn(fn_def_ast) =>
+            gen_fn_def(llvm, fn_def_ast),
     }
 }
 
-fn gen_left_def(llvm: &mut LLVM, left_def_ast: &LeftDefAst) -> Result<LLVMValueRef> {
-    let arg_count = left_def_ast.args.len();
+fn gen_fn_def(llvm: &mut LLVM, fn_def_ast: &FnDefAst) -> Result<LLVMValueRef> {
+    let fn_value = match llvm.get_named_function(&fn_def_ast.left_fn_def.ident.name) {
+        Ok(f) => f,
+        Err(_) => gen_left_fn_def(llvm, &fn_def_ast.left_fn_def)?,
+    };
+    llvm.clear_named_value();
+    let arg_count = fn_def_ast.left_fn_def.args.len();
+    for i in 0..arg_count {
+        let arg = LLVM::get_param(fn_value, i)?;
+        llvm.set_value_name(arg, &fn_def_ast.left_fn_def.args[i].name);
+        llvm.insert_named_value(fn_def_ast.left_fn_def.args[i].name.clone(), arg)?;
+    }
+    gen_llvm_block(llvm, fn_value,
+        |llvm| {
+            let expr = gen_expr(llvm, &fn_def_ast.expr)?;
+            llvm.build_ret(expr)?;
+            Ok(())
+        }
+    )?;
+    Ok(fn_value)
+}
+
+fn gen_left_fn_def(llvm: &mut LLVM, left_fn_def_ast: &LeftFnDefAst) -> Result<LLVMValueRef> {
+    let arg_count = left_fn_def_ast.args.len();
     let int_ty = llvm.int32_type()?;
     let arg_tys = vec![int_ty; arg_count];
-    let f_ty = llvm.function_type(int_ty, arg_tys)?;
-    let f = llvm.add_function(&left_def_ast.ident.name, f_ty)?;
-    if f.is_null() {
-        bail!("Cannot create function.");
+    let fn_ty = llvm.function_type(int_ty, arg_tys)?;
+    let fn_value_res = llvm.add_function(&left_fn_def_ast.ident.name, fn_ty);
+    match fn_value_res {
+        Ok(f) => Ok(f),
+        Err(_) => bail!("Cannot create function."),
     }
-    Ok(f)
 }
 
 fn gen_expr(llvm: &mut LLVM, expr_ast: &ExprAst) -> Result<LLVMValueRef> {
@@ -90,17 +84,17 @@ fn gen_expr(llvm: &mut LLVM, expr_ast: &ExprAst) -> Result<LLVMValueRef> {
 fn gen_fn(llvm: &mut LLVM, fn_ast: &FnAst) -> Result<LLVMValueRef> {
     match fn_ast.fn_expr.as_ref() {
         ExprAst::Ident(IdentAst { name }) => {
-            let f = llvm.get_named_function(name)?;
-            if f.is_null() {
+            let fn_value = llvm.get_named_function(name)?;
+            if fn_value.is_null() {
                 bail!("Unknown function");
             }
-            let arg_count = LLVM::count_params(f);
+            let arg_count = LLVM::count_params(fn_value);
             if arg_count != 1 {
                 bail!("Invalid count of arguments.");
             }
             let args = vec![gen_expr(llvm, fn_ast.arg_expr.as_ref())?];
-            let ty = LLVM::get_called_function_type(f)?;
-            Ok(llvm.build_call(ty, f, args, "calltmp")?)
+            let ty = LLVM::get_called_function_type(fn_value)?;
+            Ok(llvm.build_call(ty, fn_value, args, "calltmp")?)
         },
         _ => panic!("Not implemented."),
     }
@@ -122,10 +116,39 @@ fn gen_infix_op(llvm: &mut LLVM, infix_op_ast: &InfixOpAst) -> Result<LLVMValueR
 }
 
 fn gen_ident(llvm: &mut LLVM, ident_ast: &IdentAst) -> Result<LLVMValueRef> {
-    llvm.get_named_value(&ident_ast.name)
+    if let Ok(value) = llvm.get_named_value(&ident_ast.name) {
+        Ok(value)
+    }
+    else {
+        bail!("Unknown identifier.")
+    }
 }
 
 fn gen_num(llvm: &mut LLVM, num_ast: &NumAst) -> Result<LLVMValueRef> {
     let value = num_ast.value.parse().unwrap();
     Ok(llvm.const_int(value, 0)?)
+}
+
+fn gen_llvm_block(llvm: &mut LLVM, fn_value: LLVMValueRef, body: impl FnOnce(&mut LLVM) -> Result<()>) -> Result<()> {
+    let block_count = LLVM::count_basic_blocks(fn_value);
+    if block_count != 0 {
+        bail!("Function cannot be redefined.");
+    }
+    let block = llvm.append_basic_block(fn_value, "entry")?;
+    llvm.position_builder_at_end(block);
+    match body(llvm) {
+        Ok(_) => {
+            if LLVM::verify_function(fn_value) {
+                Ok(())
+            }
+            else {
+                LLVM::delete_function(fn_value);
+                bail!("Invalid function.");
+            }
+        },
+        Err(e) => {
+            LLVM::delete_function(fn_value);
+            Err(e)
+        },
+    }
 }

@@ -127,10 +127,10 @@ impl LLVM {
         }
     }
 
-    pub fn insert_named_value(&mut self, name: String, value: LLVMValueRef) -> Result<LLVMValueRef> {
+    pub fn insert_named_value(&mut self, name: String, value: LLVMValueRef) -> Result<()> {
         match self.named_values.insert(name, value) {
             Some(_) => bail!("Duplicate identifier name."),
-            None => Ok(value),
+            None => Ok(()),
         }
     }
 

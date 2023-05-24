@@ -1,2 +1,2 @@
-simple_add_one a = a + 1;
-simple_add a b = a + b;
+fn add_one a = a + 1;
+fn add a b = a + b;

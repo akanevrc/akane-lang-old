@@ -1,7 +1,8 @@
 use std::rc::Rc;
 use crate::data::ast::{
+    TopDefAst,
     FnDefAst,
-    LeftDefAst,
+    LeftFnDefAst,
     ExprAst,
     FnAst,
     PrefixOpAst,
@@ -10,16 +11,20 @@ use crate::data::ast::{
     NumAst,
 };
 
-fn parse(s: &str) -> Vec<FnDefAst> {
+fn parse(s: &str) -> Vec<TopDefAst> {
     super::parse(crate::lexer::lex(s.to_owned()).unwrap()).unwrap()
 }
 
-fn fn_def_ast(left_def: LeftDefAst, expr: ExprAst) -> FnDefAst {
-    FnDefAst { left_def, expr }
+fn top_fn_def_ast(fn_def_ast: FnDefAst) -> TopDefAst {
+    TopDefAst::Fn(fn_def_ast)
 }
 
-fn left_def_ast(ident: IdentAst, args: Vec<IdentAst>) -> LeftDefAst {
-    LeftDefAst { ident, args }
+fn fn_def_ast(left_fn_def: LeftFnDefAst, expr: ExprAst) -> FnDefAst {
+    FnDefAst { left_fn_def, expr }
+}
+
+fn left_fn_def_ast(ident: IdentAst, args: Vec<IdentAst>) -> LeftFnDefAst {
+    LeftFnDefAst { ident, args }
 }
 
 fn fn_expr_ast(fn_ast: FnAst) -> ExprAst {
@@ -70,17 +75,21 @@ fn parse_empty() {
 #[test]
 fn parse_arg() {
     assert_eq!(
-        parse("f a = 0"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![ident_ast("a")]),
-            num_expr_ast(num_ast("0"))
+        parse("fn f a = 0"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![ident_ast("a")]),
+                num_expr_ast(num_ast("0"))
+            )
         )]
     );
     assert_eq!(
-        parse("f a b = a + b"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![ident_ast("a"), ident_ast("b")]),
-            infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
+        parse("fn f a b = a + b"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![ident_ast("a"), ident_ast("b")]),
+                infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
+            )
         )]
     );
 }
@@ -88,17 +97,21 @@ fn parse_arg() {
 #[test]
 fn parse_ident() {
     assert_eq!(
-        parse("f = a"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            ident_expr_ast(ident_ast("a"))
+        parse("fn f = a"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                ident_expr_ast(ident_ast("a"))
+            )
         )]
     );
     assert_eq!(
-        parse("f = f"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            ident_expr_ast(ident_ast("f"))
+        parse("fn f = f"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                ident_expr_ast(ident_ast("f"))
+            )
         )]
     );
 }
@@ -106,17 +119,21 @@ fn parse_ident() {
 #[test]
 fn parse_num() {
     assert_eq!(
-        parse("f = 0"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            num_expr_ast(num_ast("0"))
+        parse("fn f = 0"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                num_expr_ast(num_ast("0"))
+            )
         )]
     );
     assert_eq!(
-        parse("f = 123"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            num_expr_ast(num_ast("123"))
+        parse("fn f = 123"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                num_expr_ast(num_ast("123"))
+            )
         )]
     );
 }
@@ -124,23 +141,27 @@ fn parse_num() {
 #[test]
 fn parse_fn() {
     assert_eq!(
-        parse("f = g a"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a"))))
+        parse("fn f = g a"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a"))))
+            )
         )]
     );
     assert_eq!(
-        parse("f = g a b"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            fn_expr_ast(fn_ast(
+        parse("fn f = g a b"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
                 fn_expr_ast(fn_ast(
-                    ident_expr_ast(ident_ast("g")),
-                    ident_expr_ast(ident_ast("a"))
-                )),
-                ident_expr_ast(ident_ast("b"))
-            ))
+                    fn_expr_ast(fn_ast(
+                        ident_expr_ast(ident_ast("g")),
+                        ident_expr_ast(ident_ast("a"))
+                    )),
+                    ident_expr_ast(ident_ast("b"))
+                ))
+            )
         )]
     );
 }
@@ -148,25 +169,29 @@ fn parse_fn() {
 #[test]
 fn parse_infix_op() {
     assert_eq!(
-        parse("f = a + 1"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), num_expr_ast(num_ast("1"))))
+        parse("fn f = a + 1"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), num_expr_ast(num_ast("1"))))
+            )
         )]
     );
     assert_eq!(
-        parse("f = g a + g b + c"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            infix_op_expr_ast(infix_op_ast(
-                "+",
+        parse("fn f = g a + g b + c"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
-                    fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a")))),
-                    fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("b"))))
-                )),
-                ident_expr_ast(ident_ast("c"))
-            ))
+                    infix_op_expr_ast(infix_op_ast(
+                        "+",
+                        fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a")))),
+                        fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("b"))))
+                    )),
+                    ident_expr_ast(ident_ast("c"))
+                ))
+            )
         )]
     );
 }
@@ -174,33 +199,37 @@ fn parse_infix_op() {
 #[test]
 fn parse_paren() {
     assert_eq!(
-        parse("f = (a + b) + c"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            infix_op_expr_ast(infix_op_ast(
-                "+",
+        parse("fn f = (a + b) + c"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
-                    ident_expr_ast(ident_ast("a")),
-                    ident_expr_ast(ident_ast("b"))
-                )),
-                ident_expr_ast(ident_ast("c"))
-            ))
+                    infix_op_expr_ast(infix_op_ast(
+                        "+",
+                        ident_expr_ast(ident_ast("a")),
+                        ident_expr_ast(ident_ast("b"))
+                    )),
+                    ident_expr_ast(ident_ast("c"))
+                ))
+            )
         )]
     );
     assert_eq!(
-        parse("f = a + (b + c)"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            infix_op_expr_ast(infix_op_ast(
-                "+",
-                ident_expr_ast(ident_ast("a")),
+        parse("fn f = a + (b + c)"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
-                    ident_expr_ast(ident_ast("b")),
-                    ident_expr_ast(ident_ast("c"))
+                    ident_expr_ast(ident_ast("a")),
+                    infix_op_expr_ast(infix_op_ast(
+                        "+",
+                        ident_expr_ast(ident_ast("b")),
+                        ident_expr_ast(ident_ast("c"))
+                    ))
                 ))
-            ))
+            )
         )]
     );
 }
@@ -208,21 +237,25 @@ fn parse_paren() {
 #[test]
 fn parse_prefix_op() {
     assert_eq!(
-        parse("f = -1"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            prefix_op_expr_ast(prefix_op_ast("-", num_expr_ast(num_ast("1"))))
+        parse("fn f = -1"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                prefix_op_expr_ast(prefix_op_ast("-", num_expr_ast(num_ast("1"))))
+            )
         )]
     );
     assert_eq!(
-        parse("f = -a + 1"),
-        &[fn_def_ast(
-            left_def_ast(ident_ast("f"), vec![]),
-            infix_op_expr_ast(
-                infix_op_ast(
-                    "+",
-                    prefix_op_expr_ast(prefix_op_ast("-", ident_expr_ast(ident_ast("a")))),
-                    num_expr_ast(num_ast("1"))
+        parse("fn f = -a + 1"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                left_fn_def_ast(ident_ast("f"), vec![]),
+                infix_op_expr_ast(
+                    infix_op_ast(
+                        "+",
+                        prefix_op_expr_ast(prefix_op_ast("-", ident_expr_ast(ident_ast("a")))),
+                        num_expr_ast(num_ast("1"))
+                    )
                 )
             )
         )]

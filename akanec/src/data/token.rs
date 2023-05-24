@@ -6,6 +6,7 @@ pub enum Token {
     Ident(String),
     Num(String),
     OpCode(String),
+    Fn,
     Equal,
     LParen,
     RParen,

@@ -12,8 +12,9 @@ use anyhow::{
 use crate::data::{
     token::Token,
     ast::{
+        TopDefAst,
         FnDefAst,
-        LeftDefAst,
+        LeftFnDefAst,
         ExprAst,
         FnAst,
         PrefixOpAst,
@@ -23,18 +24,18 @@ use crate::data::{
     },
 };
 
-pub fn parse(input: Vec<Token>) -> Result<Vec<FnDefAst>> {
+pub fn parse(input: Vec<Token>) -> Result<Vec<TopDefAst>> {
     let mut asts = Vec::new();
     let mut tokens = input.into_iter().peekable();
     loop {
         if let Some(_) = assume_eof(&mut tokens)? {
             return Ok(asts);
         }
-        if let Some(ast) = assume_fn_def(&mut tokens)? {
+        if let Some(ast) = assume_top_def(&mut tokens)? {
             asts.push(ast);
             continue;
         }
-        bail!("Invalid function definition.");
+        bail!("Invalid top-level definition.");
     }
 }
 
@@ -48,24 +49,36 @@ fn assume_eof(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     }
 }
 
-fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<FnDefAst>> {
-    if let Some(left_def) = assume_left_def(tokens)? {
-        if let Some(_) = assume_equal(tokens)? {
-            if let Some(expr) = assume_expr(tokens)? {
-                if let Some(_) = assume_semicolon(tokens)? {
-                    return Ok(Some(FnDefAst { left_def, expr }));
-                }
-            }
-            bail!("Expression required.");
-        }
-        bail!("Equal required.");
+fn assume_top_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TopDefAst>> {
+    if let Some(ast) = assume_fn_def(tokens)? {
+        Ok(Some(TopDefAst::Fn(ast)))
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_left_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<LeftDefAst>> {
+fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<FnDefAst>> {
+    if let Some(_) = assume_simple_token(tokens, Token::Fn)? {
+        if let Some(left_fn_def) = assume_left_fn_def(tokens)? {
+            if let Some(_) = assume_simple_token(tokens, Token::Equal)? {
+                if let Some(expr) = assume_expr(tokens)? {
+                    if let Some(_) = assume_simple_token(tokens, Token::Semicolon)? {
+                        return Ok(Some(FnDefAst { left_fn_def, expr }));
+                    }
+                }
+                bail!("Expression required.");
+            }
+            bail!("Equal required.");
+        }
+        bail!("Left function definition required.");
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_left_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<LeftFnDefAst>> {
     if let Some(ident) = assume_ident(tokens)? {
         let mut args = Vec::new();
         loop {
@@ -73,18 +86,8 @@ fn assume_left_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result
                 args.push(arg);
                 continue;
             }
-            return Ok(Some(LeftDefAst { ident, args }));
+            return Ok(Some(LeftFnDefAst { ident, args }));
         }
-    }
-    else {
-        Ok(None)
-    }
-}
-
-fn assume_equal(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<()>> {
-    if let Some(Token::Equal) = tokens.peek() {
-        tokens.next();
-        Ok(Some(()))
     }
     else {
         Ok(None)
@@ -205,10 +208,15 @@ fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     }
 }
 
-fn assume_semicolon(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<()>> {
-    if let Some(Token::Semicolon) = tokens.peek() {
-        tokens.next();
-        Ok(Some(()))
+fn assume_simple_token(tokens: &mut Peekable<impl Iterator<Item = Token>>, assumed: Token) -> Result<Option<()>> {
+    if let Some(token) = tokens.peek() {
+        if *token == assumed {
+            tokens.next();
+            Ok(Some(()))
+        }
+        else {
+            Ok(None)
+        }
     }
     else {
         Ok(None)

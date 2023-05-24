@@ -1,17 +1,17 @@
 mod ffi;
 
 #[test]
-fn simple_add_one() {
+fn add_one() {
     unsafe {
-        assert_eq!(ffi::simple_add_one(1), 2);
-        assert_eq!(ffi::simple_add_one(4), 5);
+        assert_eq!(ffi::add_one(1), 2);
+        assert_eq!(ffi::add_one(4), 5);
     }
 }
 
 #[test]
-fn simple_add() {
+fn add() {
     unsafe {
-        assert_eq!(ffi::simple_add(1, 1), 2);
-        assert_eq!(ffi::simple_add(3, 5), 8);
+        assert_eq!(ffi::add(1, 1), 2);
+        assert_eq!(ffi::add(3, 5), 8);
     }
 }

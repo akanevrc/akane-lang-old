@@ -1,13 +1,18 @@
 use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum TopDefAst {
+    Fn(FnDefAst),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct FnDefAst {
-    pub left_def: LeftDefAst,
+    pub left_fn_def: LeftFnDefAst,
     pub expr: ExprAst,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct LeftDefAst {
+pub struct LeftFnDefAst {
     pub ident: IdentAst,
     pub args: Vec<IdentAst>,
 }
