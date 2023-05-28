@@ -4,12 +4,16 @@ use std::{
     collections::HashMap,
     ffi::CString,
     fs,
+    ptr,
 };
 use anyhow::{
     bail,
     Result,
 };
 use llvm_sys::{
+    LLVMBasicBlock,
+    LLVMType,
+    LLVMValue,
     analysis::{
         LLVMVerifierFailureAction,
         LLVMVerifyFunction,
@@ -20,18 +24,17 @@ use llvm_sys::{
         LLVMBuildAdd,
         LLVMBuildCall2,
         LLVMBuildRet,
+        LLVMBuildRetVoid,
         LLVMConstInt,
         LLVMContextCreate,
         LLVMContextDispose,
         LLVMCountBasicBlocks,
-        LLVMCountParams,
         LLVMCreateBuilderInContext,
         LLVMDeleteFunction,
         LLVMDisposeBuilder,
         LLVMDisposeMessage,
         LLVMDisposeModule,
         LLVMFunctionType,
-        LLVMGetCalledFunctionType,
         LLVMGetNamedFunction,
         LLVMGetParam,
         LLVMInt32TypeInContext,
@@ -54,23 +57,36 @@ use pool::{
     SlicePool,
 };
 
-pub trait Ptr: Copy {
+pub trait Ptr<T>: Copy {
+    fn null() -> *mut T;
     fn is_null(&self) -> bool;
 }
 
-impl Ptr for LLVMBasicBlockRef {
+impl Ptr<LLVMBasicBlock> for LLVMBasicBlockRef {
+    fn null() -> *mut LLVMBasicBlock {
+        ptr::null_mut()
+    }
+
     fn is_null(&self) -> bool {
         LLVMBasicBlockRef::is_null(*self)
     }
 }
 
-impl Ptr for LLVMTypeRef {
+impl Ptr<LLVMType> for LLVMTypeRef {
+    fn null() -> *mut LLVMType {
+        ptr::null_mut()
+    }
+
     fn is_null(&self) -> bool {
         LLVMTypeRef::is_null(*self)
     }
 }
 
-impl Ptr for LLVMValueRef {
+impl Ptr<LLVMValue> for LLVMValueRef {
+    fn null() -> *mut LLVMValue {
+        ptr::null_mut()
+    }
+
     fn is_null(&self) -> bool {
         LLVMValueRef::is_null(*self)
     }
@@ -82,8 +98,8 @@ pub struct LLVM {
     builder: LLVMBuilderRef,
     named_values: HashMap<String, LLVMValueRef>,
     c_str_pool: CStrPool,
-    type_slice_pool: SlicePool<LLVMTypeRef>,
-    value_slice_pool: SlicePool<LLVMValueRef>,
+    type_slice_pool: SlicePool<LLVMType, LLVMTypeRef>,
+    value_slice_pool: SlicePool<LLVMValue, LLVMValueRef>,
 }
 
 impl Drop for LLVM {
@@ -134,7 +150,7 @@ impl LLVM {
         }
     }
 
-    fn ptr_to_result<LLVMRef: Ptr>(value: LLVMRef) -> Result<LLVMRef> {
+    fn ptr_to_result<T, LLVMRef: Ptr<T>>(value: LLVMRef) -> Result<LLVMRef> {
         if value.is_null() {
             bail!("Pointer is null.")
         }
@@ -157,14 +173,6 @@ impl LLVM {
             let arg_ty_vec = self.type_slice_pool.slice(&arg_tys);
             Self::ptr_to_result(
                 LLVMFunctionType(ret_ty, arg_ty_vec, arg_count, 0)
-            )
-        }
-    }
-
-    pub fn get_called_function_type(fn_value: LLVMValueRef) -> Result<LLVMTypeRef> {
-        unsafe {
-            Self::ptr_to_result(
-                LLVMGetCalledFunctionType(fn_value)
             )
         }
     }
@@ -214,12 +222,6 @@ impl LLVM {
         }
     }
 
-    pub fn count_params(fn_value: LLVMValueRef) -> usize {
-        unsafe {
-            LLVMCountParams(fn_value) as usize
-        }
-    }
-
     pub fn append_basic_block(&mut self, fn_value: LLVMValueRef, name: &str) -> Result<LLVMBasicBlockRef> {
         unsafe {
             Self::ptr_to_result(
@@ -255,6 +257,14 @@ impl LLVM {
         unsafe {
             Self::ptr_to_result(
                 LLVMBuildAdd(self.builder, lhs, rhs, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_ret_void(&self) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildRetVoid(self.builder)
             )
         }
     }

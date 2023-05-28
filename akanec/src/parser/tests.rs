@@ -1,9 +1,13 @@
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    rc::Rc,
+};
 use crate::data::ast::{
-    TopDefAst,
+    TopDefEnum,
     FnDefAst,
     LeftFnDefAst,
     ExprAst,
+    ExprEnum,
     FnAst,
     PrefixOpAst,
     InfixOpAst,
@@ -11,44 +15,44 @@ use crate::data::ast::{
     NumAst,
 };
 
-fn parse(s: &str) -> Vec<TopDefAst> {
+fn parse(s: &str) -> Vec<TopDefEnum> {
     super::parse(crate::lexer::lex(s.to_owned()).unwrap()).unwrap()
 }
 
-fn top_fn_def_ast(fn_def_ast: FnDefAst) -> TopDefAst {
-    TopDefAst::Fn(fn_def_ast)
+fn top_fn_def_ast(fn_def_ast: FnDefAst) -> TopDefEnum {
+    TopDefEnum::Fn(fn_def_ast)
 }
 
 fn fn_def_ast(left_fn_def: LeftFnDefAst, expr: ExprAst) -> FnDefAst {
-    FnDefAst { left_fn_def, expr }
+    FnDefAst { left_fn_def, expr, fn_sem: RefCell::new(None), arg_sems: RefCell::new(None) }
 }
 
-fn left_fn_def_ast(ident: IdentAst, args: Vec<IdentAst>) -> LeftFnDefAst {
-    LeftFnDefAst { ident, args }
+fn left_fn_def_ast(name: &str, args: Vec<&str>) -> LeftFnDefAst {
+    LeftFnDefAst { name: name.to_owned(), args: args.into_iter().map(|s| s.to_owned()).collect() }
 }
 
 fn fn_expr_ast(fn_ast: FnAst) -> ExprAst {
-    ExprAst::Fn(fn_ast)
+    ExprAst { expr_enum: ExprEnum::Fn(fn_ast), ty_sem: RefCell::new(None) }
 }
 
 fn prefix_op_expr_ast(prefix_op_ast: PrefixOpAst) -> ExprAst {
-    ExprAst::PrefixOp(prefix_op_ast)
+    ExprAst { expr_enum: ExprEnum::PrefixOp(prefix_op_ast), ty_sem: RefCell::new(None) }
 }
 
 fn infix_op_expr_ast(infix_op_ast: InfixOpAst) -> ExprAst {
-    ExprAst::InfixOp(infix_op_ast)
+    ExprAst { expr_enum: ExprEnum::InfixOp(infix_op_ast), ty_sem: RefCell::new(None) }
 }
 
 fn ident_expr_ast(ident_ast: IdentAst) -> ExprAst {
-    ExprAst::Ident(ident_ast)
+    ExprAst { expr_enum: ExprEnum::Ident(ident_ast), ty_sem: RefCell::new(None) }
 }
 
 fn num_expr_ast(num_ast: NumAst) -> ExprAst {
-    ExprAst::Num(num_ast)
+    ExprAst { expr_enum: ExprEnum::Num(num_ast), ty_sem: RefCell::new(None) }
 }
 
 fn fn_ast(fn_expr: ExprAst, arg_expr: ExprAst) -> FnAst {
-    FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr) }
+    FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr), thunk: RefCell::new(None) }
 }
 
 fn prefix_op_ast(op_code: &str, rhs: ExprAst) -> PrefixOpAst {
@@ -60,7 +64,7 @@ fn infix_op_ast(op_code: &str, lhs: ExprAst, rhs: ExprAst) -> InfixOpAst {
 }
 
 fn ident_ast(name: &str) -> IdentAst {
-    IdentAst { name: name.to_owned() }
+    IdentAst { name: name.to_owned(), thunk: RefCell::new(None) }
 }
 
 fn num_ast(value: &str) -> NumAst {
@@ -78,7 +82,7 @@ fn parse_arg() {
         parse("fn f a = 0"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![ident_ast("a")]),
+                left_fn_def_ast("f", vec!["a"]),
                 num_expr_ast(num_ast("0"))
             )
         )]
@@ -87,7 +91,7 @@ fn parse_arg() {
         parse("fn f a b = a + b"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![ident_ast("a"), ident_ast("b")]),
+                left_fn_def_ast("f", vec!["a", "b"]),
                 infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
             )
         )]
@@ -100,7 +104,7 @@ fn parse_ident() {
         parse("fn f = a"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 ident_expr_ast(ident_ast("a"))
             )
         )]
@@ -109,7 +113,7 @@ fn parse_ident() {
         parse("fn f = f"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 ident_expr_ast(ident_ast("f"))
             )
         )]
@@ -122,7 +126,7 @@ fn parse_num() {
         parse("fn f = 0"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 num_expr_ast(num_ast("0"))
             )
         )]
@@ -131,7 +135,7 @@ fn parse_num() {
         parse("fn f = 123"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 num_expr_ast(num_ast("123"))
             )
         )]
@@ -144,7 +148,7 @@ fn parse_fn() {
         parse("fn f = g a"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a"))))
             )
         )]
@@ -153,7 +157,7 @@ fn parse_fn() {
         parse("fn f = g a b"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 fn_expr_ast(fn_ast(
                     fn_expr_ast(fn_ast(
                         ident_expr_ast(ident_ast("g")),
@@ -172,7 +176,7 @@ fn parse_infix_op() {
         parse("fn f = a + 1"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), num_expr_ast(num_ast("1"))))
             )
         )]
@@ -181,7 +185,7 @@ fn parse_infix_op() {
         parse("fn f = g a + g b + c"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
                     infix_op_expr_ast(infix_op_ast(
@@ -202,7 +206,7 @@ fn parse_paren() {
         parse("fn f = (a + b) + c"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
                     infix_op_expr_ast(infix_op_ast(
@@ -219,7 +223,7 @@ fn parse_paren() {
         parse("fn f = a + (b + c)"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
                     ident_expr_ast(ident_ast("a")),
@@ -240,7 +244,7 @@ fn parse_prefix_op() {
         parse("fn f = -1"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 prefix_op_expr_ast(prefix_op_ast("-", num_expr_ast(num_ast("1"))))
             )
         )]
@@ -249,7 +253,7 @@ fn parse_prefix_op() {
         parse("fn f = -a + 1"),
         &[top_fn_def_ast(
             fn_def_ast(
-                left_fn_def_ast(ident_ast("f"), vec![]),
+                left_fn_def_ast("f", vec![]),
                 infix_op_expr_ast(
                     infix_op_ast(
                         "+",

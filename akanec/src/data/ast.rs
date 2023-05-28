@@ -1,7 +1,17 @@
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    rc::Rc,
+};
+use super::{
+    semantics::{
+        ty_sem::TySem,
+        fn_sem::FnSem,
+    },
+    thunk::Thunk,
+};
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum TopDefAst {
+pub enum TopDefEnum {
     Fn(FnDefAst),
 }
 
@@ -9,16 +19,24 @@ pub enum TopDefAst {
 pub struct FnDefAst {
     pub left_fn_def: LeftFnDefAst,
     pub expr: ExprAst,
+    pub fn_sem: RefCell<Option<Rc<FnSem>>>,
+    pub arg_sems: RefCell<Option<Vec<Rc<FnSem>>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LeftFnDefAst {
-    pub ident: IdentAst,
-    pub args: Vec<IdentAst>,
+    pub name: String,
+    pub args: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ExprAst {
+pub struct ExprAst {
+    pub expr_enum: ExprEnum,
+    pub ty_sem: RefCell<Option<Rc<TySem>>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ExprEnum {
     Fn(FnAst),
     PrefixOp(PrefixOpAst),
     InfixOp(InfixOpAst),
@@ -30,6 +48,7 @@ pub enum ExprAst {
 pub struct FnAst {
     pub fn_expr: Rc<ExprAst>,
     pub arg_expr: Rc<ExprAst>,
+    pub thunk: RefCell<Option<Rc<Thunk>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,6 +67,7 @@ pub struct InfixOpAst {
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentAst {
     pub name: String,
+    pub thunk: RefCell<Option<Rc<Thunk>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

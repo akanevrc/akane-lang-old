@@ -4,6 +4,7 @@ use std::{
         CStr,
         CString,
     },
+    marker::PhantomData,
     pin::Pin,
 };
 use super::Ptr;
@@ -25,16 +26,17 @@ impl CStrPool {
     }
 }
 
-pub struct SlicePool<T: Ptr + Unpin> {
-    slices: HashMap<*mut T, Pin<Box<[T]>>>,
+pub struct SlicePool<T, LLVMRef: Ptr<T> + Unpin> {
+    slices: HashMap<*mut LLVMRef, Pin<Box<[LLVMRef]>>>,
+    phantom: PhantomData<T>,
 }
 
-impl<T: Ptr + Unpin> SlicePool<T> {
+impl<T, LLVMRef: Ptr<T> + Unpin> SlicePool<T, LLVMRef> {
     pub fn new() -> Self {
-        Self { slices: HashMap::new() }
+        Self { slices: HashMap::new(), phantom: PhantomData }
     }
 
-    pub fn slice(&mut self, ptrs: &[T]) -> *mut T {
+    pub fn slice(&mut self, ptrs: &[LLVMRef]) -> *mut LLVMRef {
         let mut pinned =
             Pin::new(
                 ptrs.iter()

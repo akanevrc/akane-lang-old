@@ -1,7 +1,7 @@
 mod data;
 mod lexer;
 mod parser;
-mod llvm;
+mod semantizer;
 mod codegen;
 mod compiler;
 
