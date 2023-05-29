@@ -1,12 +1,6 @@
-mod data;
-mod lexer;
-mod parser;
-mod semantizer;
-mod codegen;
-mod compiler;
-
 use anyhow::Result;
 use clap::Parser;
+use akaneclib::compiler;
 
 #[derive(Parser, Debug)]
 #[command(name = "akanec", author, version, about, long_about = None)]

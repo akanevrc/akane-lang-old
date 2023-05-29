@@ -8,7 +8,7 @@ fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
 
     if Path::new("./src/tests/akane/test.akane").exists() {
-        akanec::compiler::compile(
+        akaneclib::compiler::compile(
             "./src/tests/akane/test.akane",
             &format!("{}/test.ll", out_dir)
         ).unwrap();

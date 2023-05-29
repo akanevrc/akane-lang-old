@@ -7,4 +7,4 @@ description = "Test for akanec."
 build = "build.rs"
 
 [build-dependencies]
-akanec = { version = "0.1.0", path = "../akanec" }
+akaneclib = { version = "0.1.0", path = "../akaneclib" }
