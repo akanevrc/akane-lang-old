@@ -24,8 +24,16 @@ fn op_code(s: &str) -> Token {
     Token::OpCode(s.to_owned())
 }
 
+fn ty_keyword() -> Token {
+    Token::Ty
+}
+
 fn fn_keyword() -> Token {
     Token::Fn
+}
+
+fn arrow() -> Token {
+    Token::Arrow
 }
 
 fn equal() -> Token {
@@ -52,6 +60,7 @@ fn lex_semicolon() {
 
 #[test]
 fn lex_keyword_or_ident() {
+    assert_eq!(lex("ty"), &[ty_keyword(), semicolon(), eof()]);
     assert_eq!(lex("fn"), &[fn_keyword(), semicolon(), eof()]);
     assert_eq!(lex("_"), &[ident("_"), semicolon(), eof()]);
     assert_eq!(lex("a"), &[ident("a"), semicolon(), eof()]);
@@ -73,6 +82,7 @@ fn lex_paren() {
 
 #[test]
 fn lex_symbol_or_op_code() {
+    assert_eq!(lex("->"), &[arrow(), semicolon(), eof()]);
     assert_eq!(lex("="), &[equal(), semicolon(), eof()]);
     assert_eq!(lex("=="), &[op_code("=="), semicolon(), eof()]);
     assert_eq!(lex("+"), &[op_code("+"), semicolon(), eof()]);

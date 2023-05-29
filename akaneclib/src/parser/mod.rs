@@ -15,6 +15,10 @@ use crate::data::{
     ast::{
         TopDefEnum,
         FnDefAst,
+        TyExprAst,
+        TyExprEnum,
+        TyArrowAst,
+        TyIdentAst,
         LeftFnDefAst,
         ExprAst,
         ExprEnum,
@@ -52,28 +56,120 @@ fn assume_eof(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
 }
 
 fn assume_top_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TopDefEnum>> {
-    if let Some(ast) = assume_fn_def(tokens)? {
-        Ok(Some(TopDefEnum::Fn(ast)))
+    let ret =
+        if let Some(ast) = assume_fn_def(tokens)? {
+            Ok(Some(TopDefEnum::Fn(ast)))
+        }
+        else {
+            return Ok(None)
+        };
+    if let Some(_) = assume_simple_token(tokens, Token::Semicolon)? {
+        ret
+    }
+    else {
+        bail!("`;` required.");
+    }
+}
+
+fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<FnDefAst>> {
+    let mut ty_annot = None;
+    if let Some(_) = assume_simple_token(tokens, Token::Ty)? {
+        if let Some(ty_expr) = assume_ty_expr(tokens)? {
+            ty_annot = Some(ty_expr);
+        }
+    }
+    if let Some(_) = assume_simple_token(tokens, Token::Fn)? {
+        if let Some(left_fn_def) = assume_left_fn_def(tokens)? {
+            if let Some(_) = assume_simple_token(tokens, Token::Equal)? {
+                if let Some(expr) = assume_expr(tokens)? {
+                    return Ok(Some(FnDefAst {
+                        ty_annot,
+                        left_fn_def,
+                        expr,
+                        fn_sem: RefCell::new(None),
+                        arg_sems: RefCell::new(None)
+                    }));
+                }
+                bail!("Expression required.");
+            }
+            bail!("`=` required.");
+        }
+        bail!("Left function definition required.");
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<FnDefAst>> {
-    if let Some(_) = assume_simple_token(tokens, Token::Fn)? {
-        if let Some(left_fn_def) = assume_left_fn_def(tokens)? {
-            if let Some(_) = assume_simple_token(tokens, Token::Equal)? {
-                if let Some(expr) = assume_expr(tokens)? {
-                    if let Some(_) = assume_simple_token(tokens, Token::Semicolon)? {
-                        return Ok(Some(FnDefAst { left_fn_def, expr, fn_sem: RefCell::new(None), arg_sems: RefCell::new(None) }));
-                    }
-                }
-                bail!("Expression required.");
-            }
-            bail!("Equal required.");
+fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+    let mut exprs = Vec::new();
+    if let Some(lhs) = assume_ty_lhs(tokens)? {
+        exprs.push(lhs);
+        while let Some(rhs) = assume_ty_rhs(tokens)? {
+            exprs.push(rhs);
         }
-        bail!("Left function definition required.");
+        let mut expr_iter = exprs.into_iter().rev();
+        let mut rhs = expr_iter.next().unwrap();
+        for lhs in expr_iter {
+            rhs = TyExprAst {
+                expr_enum: TyExprEnum::Arrow(
+                    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs) }
+                ),
+                ty_sem: RefCell::new(None)
+            };
+        }
+        Ok(Some(rhs))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_ty_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+    if let Some(term) = assume_ty_term(tokens)? {
+        Ok(Some(term))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_ty_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+    if let Some(Token::Arrow) = tokens.peek() {
+        tokens.next();
+        if let Some(term) = assume_ty_term(tokens)? {
+            return Ok(Some(term));
+        }
+        bail!("Type term required.");
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+    if let Some(factor) = assume_ty_factor(tokens)? {
+        Ok(Some(factor))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_ty_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+    if let Some(ident) = assume_ty_ident(tokens)? {
+        Ok(Some(TyExprAst { expr_enum: TyExprEnum::Ident(ident), ty_sem: RefCell::new(None) }))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_ty_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyIdentAst>> {
+    if let Some(Token::Ident(name)) = tokens.peek() {
+        let name = name.to_owned();
+        tokens.next();
+        Ok(Some(TyIdentAst { name }))
     }
     else {
         Ok(None)
@@ -194,7 +290,7 @@ fn assume_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Op
                 tokens.next();
                 return Ok(Some(expr))
             }
-            bail!("Right paren required.")
+            bail!("`)` required.")
         }
         bail!("Expression required.")
     }

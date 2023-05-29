@@ -92,7 +92,10 @@ fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> 
         while is_ident_tail(chars.peek()) {
             token.push(chars.next().unwrap());
         }
-        if is_fn(&token) {
+        if is_ty(&token) {
+            Ok(Some(Token::Ty))
+        }
+        else if is_fn(&token) {
             Ok(Some(Token::Fn))
         }
         else {
@@ -138,7 +141,10 @@ fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) ->
         while is_op_code(chars.peek()) {
             token.push(chars.next().unwrap());
         }
-        if is_equal(&token) {
+        if is_arrow(&token) {
+            Ok(Some(Token::Arrow))
+        }
+        else if is_equal(&token) {
             Ok(Some(Token::Equal))
         }
         else {
@@ -202,8 +208,16 @@ fn is_r_paren(c: Option<&char>) -> bool {
     c.map_or(false, |c| *c == ')')
 }
 
+fn is_ty(s: &str) -> bool {
+    s == "ty"
+}
+
 fn is_fn(s: &str) -> bool {
     s == "fn"
+}
+
+fn is_arrow(s: &str) -> bool {
+    s == "->"
 }
 
 fn is_equal(s: &str) -> bool {

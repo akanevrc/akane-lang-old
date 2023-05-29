@@ -17,10 +17,34 @@ pub enum TopDefEnum {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnDefAst {
+    pub ty_annot: Option<TyExprAst>,
     pub left_fn_def: LeftFnDefAst,
     pub expr: ExprAst,
     pub fn_sem: RefCell<Option<Rc<FnSem>>>,
     pub arg_sems: RefCell<Option<Vec<Rc<FnSem>>>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TyExprAst {
+    pub expr_enum: TyExprEnum,
+    pub ty_sem: RefCell<Option<Rc<TySem>>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TyExprEnum {
+    Arrow(TyArrowAst),
+    Ident(TyIdentAst),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TyArrowAst {
+    pub lhs: Rc<TyExprAst>,
+    pub rhs: Rc<TyExprAst>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TyIdentAst {
+    pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
