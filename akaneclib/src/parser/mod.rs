@@ -113,7 +113,7 @@ fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
         for lhs in expr_iter {
             rhs = TyExprAst {
                 expr_enum: TyExprEnum::Arrow(
-                    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs) }
+                    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None) }
                 ),
                 ty_sem: RefCell::new(None)
             };
@@ -169,7 +169,7 @@ fn assume_ty_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result
     if let Some(Token::Ident(name)) = tokens.peek() {
         let name = name.to_owned();
         tokens.next();
-        Ok(Some(TyIdentAst { name }))
+        Ok(Some(TyIdentAst { name, ty_sem: RefCell::new(None) }))
     }
     else {
         Ok(None)

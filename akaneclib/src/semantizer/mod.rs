@@ -6,6 +6,10 @@ use crate::data::{
     ast::{
         TopDefEnum,
         FnDefAst,
+        TyExprAst,
+        TyExprEnum,
+        TyArrowAst,
+        TyIdentAst,
         LeftFnDefAst,
         ExprAst,
         ExprEnum,
@@ -41,27 +45,76 @@ fn visit_top_def(ctx: &mut SemContext, top_def_enum: &TopDefEnum) -> Result<()> 
 
 fn visit_fn_def(ctx: &mut SemContext, fn_def_ast: &FnDefAst) -> Result<()> {
     let qual = ctx.qual_stack.peek().get_val(ctx)?;
-    let int_ty = TySem::get_from_name(ctx, "i32")?;
-    let fn_in_tys = vec![int_ty.clone(); fn_def_ast.left_fn_def.args.len()];
-    let fn_out_ty = int_ty.clone();
-    let fn_ty = TySem::new_or_get_fn_ty(ctx, qual.clone(), fn_in_tys, fn_out_ty)?;
-    let fn_res = FnSem::new(ctx, qual, fn_def_ast.left_fn_def.name.clone(), fn_ty);
+    let fn_ty =
+        if let Some(ty_annot) = &fn_def_ast.ty_annot {
+            visit_ty_expr(ctx, ty_annot)?;
+            ty_annot.ty_sem.borrow().as_ref().unwrap().clone()
+        }
+        else {
+            let int_ty = TySem::get_from_name(ctx, "i32")?;
+            let fn_in_tys = vec![int_ty.clone(); fn_def_ast.left_fn_def.args.len()];
+            let fn_out_ty = int_ty.clone();
+            TySem::new_or_get_fn_ty(ctx, qual.clone(), fn_in_tys, fn_out_ty)?
+        };
+    let fn_res = FnSem::new(ctx, qual, fn_def_ast.left_fn_def.name.clone(), fn_ty.clone());
     match fn_res {
         Ok(f) => *fn_def_ast.fn_sem.borrow_mut() = Some(f.clone()),
         Err(_) => bail!("Duplicate function definitions."),
     }
     let qual = ctx.push_scope_into_qual_stack(ScopeSem::Fn(fn_def_ast.left_fn_def.name.clone())).get_val(ctx)?;
     visit_left_fn_def(ctx, &fn_def_ast.left_fn_def)?;
-    let arg_in_tys = Vec::new();
-    let arg_out_ty = int_ty;
-    let arg_ty = TySem::new_or_get_fn_ty(ctx, qual.clone(), arg_in_tys, arg_out_ty)?;
+    let names = &fn_def_ast.left_fn_def.args;
+    let (arg_tys, _) = fn_ty.to_arg_tys();
+    if arg_tys.len() != names.len() {
+        bail!("Defferent argument count between type annotation and function definition.")
+    }
     let args =
-        fn_def_ast.left_fn_def.args.iter()
-        .map(|arg| FnSem::new(ctx, qual.clone(), arg.clone(), arg_ty.clone()))
+        names.iter()
+        .zip(arg_tys)
+        .map(|(name, arg_ty)| FnSem::new(ctx, qual.clone(), name.clone(), arg_ty.clone()))
         .collect::<Result<_>>()?;
     *fn_def_ast.arg_sems.borrow_mut() = Some(args);
     visit_expr(ctx, &fn_def_ast.expr)?;
     ctx.qual_stack.pop()?.get_val(ctx)?;
+    Ok(())
+}
+
+fn visit_ty_expr(ctx: &mut SemContext, ty_expr_ast: &TyExprAst) -> Result<()> {
+    match &ty_expr_ast.expr_enum {
+        TyExprEnum::Arrow(ty_arrow) => {
+            visit_ty_arrow(ctx, ty_arrow)?;
+            let ty = ty_arrow.ty_sem.borrow();
+            *ty_expr_ast.ty_sem.borrow_mut() = Some(ty.as_ref().unwrap().clone());
+        },
+        TyExprEnum::Ident(ty_ident) => {
+            visit_ty_ident(ctx, ty_ident)?;
+            let ty = ty_ident.ty_sem.borrow();
+            *ty_expr_ast.ty_sem.borrow_mut() = Some(ty.as_ref().unwrap().clone());
+        },
+    }
+    Ok(())
+}
+
+fn visit_ty_arrow(ctx: &mut SemContext, ty_arrow_ast: &TyArrowAst) -> Result<()> {
+    visit_ty_expr(ctx, &ty_arrow_ast.lhs)?;
+    visit_ty_expr(ctx, &ty_arrow_ast.rhs)?;
+    let qual = ctx.qual_stack.peek().get_val(ctx)?;
+    let in_ty = ty_arrow_ast.lhs.ty_sem.borrow().as_ref().unwrap().clone();
+    let out_ty = ty_arrow_ast.rhs.ty_sem.borrow().as_ref().unwrap().clone();
+    *ty_arrow_ast.ty_sem.borrow_mut() = Some(TySem::new_or_get_ty2(ctx, qual, in_ty, out_ty));
+    Ok(())
+}
+
+fn visit_ty_ident(ctx: &mut SemContext, ty_ident_ast: &TyIdentAst) -> Result<()> {
+    if let Some(ty) = ctx.find_with_qual(
+        |ctx, qual| TySem::get(ctx, qual.to_key(), ty_ident_ast.name.clone()).ok()
+    )
+    {
+        *ty_ident_ast.ty_sem.borrow_mut() = Some(ty)
+    }
+    else {
+        bail!("Unknown function.");
+    }
     Ok(())
 }
 

@@ -40,11 +40,11 @@ fn ty_ident_expr_ast(ty_ident: TyIdentAst) -> TyExprAst {
 }
 
 fn ty_arrow_ast(lhs: TyExprAst, rhs: TyExprAst) -> TyArrowAst {
-    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs) }
+    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None) }
 }
 
 fn ty_ident_ast(name: &str) -> TyIdentAst {
-    TyIdentAst { name: name.to_owned() }
+    TyIdentAst { name: name.to_owned(), ty_sem: RefCell::new(None) }
 }
 
 fn left_fn_def_ast(name: &str, args: Vec<&str>) -> LeftFnDefAst {

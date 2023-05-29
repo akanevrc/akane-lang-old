@@ -1,3 +1,8 @@
+ty i32 -> i32
 fn add_one a = a + 1;
+
+ty i32 -> i32 -> i32
 fn add a b = a + b;
+
+ty i32 -> i32 -> i32 -> i32 -> i32
 fn call_add a b c d = add a b + add c d;

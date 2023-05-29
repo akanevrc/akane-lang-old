@@ -40,11 +40,13 @@ pub enum TyExprEnum {
 pub struct TyArrowAst {
     pub lhs: Rc<TyExprAst>,
     pub rhs: Rc<TyExprAst>,
+    pub ty_sem: RefCell<Option<Rc<TySem>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TyIdentAst {
     pub name: String,
+    pub ty_sem: RefCell<Option<Rc<TySem>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

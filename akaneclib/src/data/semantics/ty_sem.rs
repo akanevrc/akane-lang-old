@@ -125,6 +125,25 @@ impl TySem {
         ctx.ty_store.get(&TyKey::from_name(name))
     }
 
+    pub fn get(ctx: &SemContext, qual: QualKey, name: String) -> Result<Rc<Self>> {
+        let key = TyKey::new(qual, name);
+        key.get(ctx)
+    }
+
+    pub fn to_arg_tys(self: Rc<Self>) -> (Vec<Rc<Self>>, Rc<Self>) {
+        let mut tys = Vec::new();
+        let mut ty = self;
+        loop {
+            match ty.as_ref() {
+                TySem::Ty2(ty2) => {
+                    tys.push(ty2.in_ty.clone());
+                    ty = ty2.out_ty.clone();
+                },
+                TySem::Ty1(_) => return (tys, ty.clone()),
+            }
+        }
+    }
+
     pub fn rank(&self) -> usize {
         match self {
             TySem::Ty2(ty2) => ty2.rank,
@@ -143,5 +162,9 @@ impl TyKey {
             qual: QualKey::top(),
             name: name.to_owned(),
         }
+    }
+
+    pub fn get(&self, ctx: &SemContext) -> Result<Rc<TySem>> {
+        ctx.ty_store.get(self)
     }
 }
