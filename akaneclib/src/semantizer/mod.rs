@@ -41,7 +41,7 @@ fn visit_top_def(ctx: &mut SemContext, top_def_enum: &TopDefEnum) -> Result<()> 
 
 fn visit_fn_def(ctx: &mut SemContext, fn_def_ast: &FnDefAst) -> Result<()> {
     let qual = ctx.qual_stack.peek().get_val(ctx)?;
-    let int_ty = TySem::get_from_name(ctx, "int")?;
+    let int_ty = TySem::get_from_name(ctx, "i32")?;
     let fn_in_tys = vec![int_ty.clone(); fn_def_ast.left_fn_def.args.len()];
     let fn_out_ty = int_ty.clone();
     let fn_ty = TySem::new_or_get_fn_ty(ctx, qual.clone(), fn_in_tys, fn_out_ty)?;
@@ -77,7 +77,7 @@ fn visit_expr(ctx: &mut SemContext, expr_ast: &ExprAst) -> Result<()> {
         ExprEnum::Ident(ident_ast) => visit_ident(ctx, ident_ast)?,
         ExprEnum::Num(num_ast) => visit_num(ctx, num_ast)?,
     }
-    let int_ty = TySem::get_from_name(ctx, "int")?;
+    let int_ty = TySem::get_from_name(ctx, "i32")?;
     *expr_ast.ty_sem.borrow_mut() = Some(int_ty);
     Ok(())
 }

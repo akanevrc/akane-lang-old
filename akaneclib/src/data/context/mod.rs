@@ -51,7 +51,7 @@ impl SemContext {
             fn_store: Store::<FnKey, FnSem>::new(),
         };
         let top = QualSem::top(&mut ctx);
-        TySem::new_or_get_ty1(&mut ctx, top, "int".to_owned());
+        TySem::new_or_get_ty1(&mut ctx, top, "i32".to_owned());
         ctx
     }
 
