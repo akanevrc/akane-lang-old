@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use anyhow::{
     bail,
     Result,
@@ -16,8 +17,13 @@ use crate::{
             InfixOpAst,
             IdentAst,
             NumAst,
+            HasRefCell,
         },
-        semantics::Sem,
+        semantics::{
+            Sem,
+            fn_sem::FnSem,
+        },
+        thunk::Thunk,
         llvm::LLVM,
     },
 };
@@ -43,8 +49,7 @@ fn gen_fn_def(llvm: &mut LLVM, fn_def_ast: &FnDefAst) -> Result<LLVMValueRef> {
     };
     llvm.clear_named_value();
     let rank = fn_def_ast.left_fn_def.args.len();
-    let args_ref = fn_def_ast.arg_sems.borrow();
-    let args = args_ref.as_ref().unwrap();
+    let args = HasRefCell::<Vec<Rc<FnSem>>>::get_rc(fn_def_ast);
     for i in 0..rank {
         let arg = LLVM::get_param(fn_value, i)?;
         let name = &args[i].logical_name();
@@ -65,9 +70,9 @@ fn gen_fn_def(llvm: &mut LLVM, fn_def_ast: &FnDefAst) -> Result<LLVMValueRef> {
 
 fn gen_left_fn_def(llvm: &mut LLVM, left_fn_def_ast: &LeftFnDefAst) -> Result<LLVMValueRef> {
     let rank = left_fn_def_ast.args.len();
-    let int_ty = llvm.int32_type()?;
-    let arg_tys = vec![int_ty; rank];
-    let fn_ty = llvm.function_type(int_ty, arg_tys)?;
+    let i32_ty = llvm.int32_type()?;
+    let arg_tys = vec![i32_ty; rank];
+    let fn_ty = llvm.function_type(i32_ty, arg_tys)?;
     let fn_value_res = llvm.add_function(&left_fn_def_ast.name, fn_ty);
     match fn_value_res {
         Ok(f) => Ok(f),
@@ -92,13 +97,12 @@ fn gen_expr(llvm: &mut LLVM, expr_ast: &ExprAst) -> Result<Option<LLVMValueRef>>
 
 fn gen_fn(llvm: &mut LLVM, fn_ast: &FnAst) -> Result<Option<LLVMValueRef>> {
     gen_expr(llvm, &fn_ast.fn_expr)?;
-    let thunk_ref = fn_ast.thunk.borrow();
-    let thunk = thunk_ref.as_ref().unwrap();
+    let thunk = HasRefCell::<Thunk>::get_rc(fn_ast);
     if thunk.is_callable() {
         let fn_value = llvm.get_named_function(&thunk.fn_sem.logical_name())?;
-        let int_ty = llvm.int32_type()?;
-        let arg_tys = vec![int_ty; thunk.fn_sem.rank];
-        let fn_ty = llvm.function_type(int_ty, arg_tys)?;
+        let i32_ty = llvm.int32_type()?;
+        let arg_tys = vec![i32_ty; thunk.fn_sem.rank];
+        let fn_ty = llvm.function_type(i32_ty, arg_tys)?;
         let args =
             thunk.args.iter()
             .cloned()
@@ -127,7 +131,8 @@ fn gen_infix_op(llvm: &mut LLVM, infix_op_ast: &InfixOpAst) -> Result<Option<LLV
 }
 
 fn gen_ident(llvm: &mut LLVM, ident_ast: &IdentAst) -> Result<Option<LLVMValueRef>> {
-    let name = &ident_ast.thunk.borrow().as_ref().unwrap().fn_sem.logical_name();
+    let thunk = HasRefCell::<Thunk>::get_rc(ident_ast);
+    let name = &thunk.fn_sem.logical_name();
     if let Ok(value) = llvm.get_named_value(name) {
         Ok(Some(value))
     }

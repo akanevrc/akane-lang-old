@@ -198,9 +198,10 @@ fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
         while let Some((op_code, rhs)) = assume_infix_op_rhs(tokens)? {
             lhs = ExprAst {
                 expr_enum: ExprEnum::InfixOp(
-                    InfixOpAst { op_code, lhs: Rc::new(lhs), rhs: Rc::new(rhs) }
+                    InfixOpAst { op_code, lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
                 ),
-                ty_sem: RefCell::new(None)
+                ty_sem: RefCell::new(None),
+                thunk: RefCell::new(None),
             };
         }
         Ok(Some(lhs))
@@ -216,9 +217,10 @@ fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
         while let Some(f) = assume_factor(tokens)? {
             term = ExprAst {
                 expr_enum: ExprEnum::Fn(
-                    FnAst { fn_expr: Rc::new(term), arg_expr: Rc::new(f), thunk: RefCell::new(None) }
+                    FnAst { fn_expr: Rc::new(term), arg_expr: Rc::new(f), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
                 ),
-                ty_sem: RefCell::new(None)
+                ty_sem: RefCell::new(None),
+                thunk: RefCell::new(None),
             };
         }
         Ok(Some(term))
@@ -236,9 +238,10 @@ fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> R
             if let Some(term) = assume_term(tokens)? {
                 return Ok(Some(ExprAst {
                     expr_enum: ExprEnum::PrefixOp(
-                        PrefixOpAst { op_code, rhs: Rc::new(term) }
+                        PrefixOpAst { op_code, rhs: Rc::new(term), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
                     ),
-                    ty_sem: RefCell::new(None)
+                    ty_sem: RefCell::new(None),
+                    thunk: RefCell::new(None),
                 }));
             }
             bail!("Term required.");
@@ -272,10 +275,10 @@ fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
         Ok(Some(expr))
     }
     else if let Some(ident) = assume_ident(tokens)? {
-        Ok(Some(ExprAst { expr_enum: ExprEnum::Ident(ident), ty_sem: RefCell::new(None) }))
+        Ok(Some(ExprAst { expr_enum: ExprEnum::Ident(ident), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }))
     }
     else if let Some(num) = assume_num(tokens)? {
-        Ok(Some(ExprAst { expr_enum: ExprEnum::Num(num), ty_sem: RefCell::new(None) }))
+        Ok(Some(ExprAst { expr_enum: ExprEnum::Num(num), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }))
     }
     else {
         Ok(None)
@@ -303,7 +306,7 @@ fn assume_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Op
     if let Some(Token::Ident(name)) = tokens.peek() {
         let name = name.to_owned();
         tokens.next();
-        Ok(Some(IdentAst { name, thunk: RefCell::new(None) }))
+        Ok(Some(IdentAst { name, thunk: RefCell::new(None), ty_sem: RefCell::new(None) }))
     }
     else {
         Ok(None)
@@ -314,7 +317,7 @@ fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     if let Some(Token::Num(value)) = tokens.peek() {
         let value = value.to_owned();
         tokens.next();
-        Ok(Some(NumAst { value }))
+        Ok(Some(NumAst { value, ty_sem: RefCell::new(None), thunk: RefCell::new(None) }))
     }
     else {
         Ok(None)

@@ -52,43 +52,43 @@ fn left_fn_def_ast(name: &str, args: Vec<&str>) -> LeftFnDefAst {
 }
 
 fn fn_expr_ast(fn_ast: FnAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Fn(fn_ast), ty_sem: RefCell::new(None) }
+    ExprAst { expr_enum: ExprEnum::Fn(fn_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn prefix_op_expr_ast(prefix_op_ast: PrefixOpAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::PrefixOp(prefix_op_ast), ty_sem: RefCell::new(None) }
+    ExprAst { expr_enum: ExprEnum::PrefixOp(prefix_op_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn infix_op_expr_ast(infix_op_ast: InfixOpAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::InfixOp(infix_op_ast), ty_sem: RefCell::new(None) }
+    ExprAst { expr_enum: ExprEnum::InfixOp(infix_op_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn ident_expr_ast(ident_ast: IdentAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Ident(ident_ast), ty_sem: RefCell::new(None) }
+    ExprAst { expr_enum: ExprEnum::Ident(ident_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn num_expr_ast(num_ast: NumAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Num(num_ast), ty_sem: RefCell::new(None) }
+    ExprAst { expr_enum: ExprEnum::Num(num_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn fn_ast(fn_expr: ExprAst, arg_expr: ExprAst) -> FnAst {
-    FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr), thunk: RefCell::new(None) }
+    FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn prefix_op_ast(op_code: &str, rhs: ExprAst) -> PrefixOpAst {
-    PrefixOpAst { op_code: op_code.to_owned(), rhs: Rc::new(rhs) }
+    PrefixOpAst { op_code: op_code.to_owned(), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn infix_op_ast(op_code: &str, lhs: ExprAst, rhs: ExprAst) -> InfixOpAst {
-    InfixOpAst { op_code: op_code.to_owned(), lhs: Rc::new(lhs), rhs: Rc::new(rhs) }
+    InfixOpAst { op_code: op_code.to_owned(), lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn ident_ast(name: &str) -> IdentAst {
-    IdentAst { name: name.to_owned(), thunk: RefCell::new(None) }
+    IdentAst { name: name.to_owned(), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 fn num_ast(value: &str) -> NumAst {
-    NumAst { value: value.to_owned() }
+    NumAst { value: value.to_owned(), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 #[test]

@@ -5,7 +5,10 @@ use std::{
     },
     rc::Rc,
 };
-use anyhow::Result;
+use anyhow::{
+    bail,
+    Result,
+};
 use crate::{
     impl_sem_key,
     data::context::SemContext,
@@ -130,7 +133,7 @@ impl TySem {
         key.get(ctx)
     }
 
-    pub fn to_arg_tys(self: Rc<Self>) -> (Vec<Rc<Self>>, Rc<Self>) {
+    pub fn to_arg_and_ret_tys(self: Rc<Self>) -> (Vec<Rc<Self>>, Rc<Self>) {
         let mut tys = Vec::new();
         let mut ty = self;
         loop {
@@ -141,6 +144,13 @@ impl TySem {
                 },
                 TySem::Ty1(_) => return (tys, ty.clone()),
             }
+        }
+    }
+
+    pub fn to_applied(&self) -> Result<Rc<Self>> {
+        match self {
+            TySem::Ty2(ty2) => Ok(ty2.out_ty.clone()),
+            TySem::Ty1(_) => bail!("Cannot apply a argument."),
         }
     }
 
