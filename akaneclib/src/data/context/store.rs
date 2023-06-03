@@ -7,7 +7,7 @@ use anyhow::{
     bail,
     Result,
 };
-use crate::data::semantics::Sem;
+use crate::data::*;
 
 pub struct Store<Key, Val>
 where

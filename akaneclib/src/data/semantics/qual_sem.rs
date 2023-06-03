@@ -1,12 +1,6 @@
 use std::rc::Rc;
 use anyhow::Result;
-use crate::data::context::SemContext;
-use super::{
-    Sem,
-    SemVal,
-    SemKey,
-    scope_sem::ScopeSem,
-};
+use crate::data::*;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct QualSem {

@@ -1,14 +1,21 @@
-pub mod qual_sem;
-pub mod scope_sem;
-pub mod ty_sem;
-pub mod ty2_sem;
-pub mod ty1_sem;
-pub mod fn_sem;
+mod qual_sem;
+mod scope_sem;
+mod ty_sem;
+mod ty2_sem;
+mod ty1_sem;
+mod fn_sem;
 mod macros;
+
+pub use qual_sem::*;
+pub use scope_sem::*;
+pub use ty_sem::*;
+pub use ty2_sem::*;
+pub use ty1_sem::*;
+pub use fn_sem::*;
 
 use std::rc::Rc;
 use anyhow::Result;
-use super::context::SemContext;
+use crate::data::*;
 
 pub trait Sem {
     fn logical_name(&self) -> String;

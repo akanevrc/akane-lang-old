@@ -6,7 +6,7 @@ use anyhow::{
     bail,
     Result,
 };
-use crate::data::token::Token;
+use crate::data::*;
 
 pub fn lex(input: String) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
@@ -14,8 +14,8 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
     loop {
         if let Some(token) = assume_eof(&mut chars)? {
             if let Some(last) = tokens.last() {
-                if *last != Token::Semicolon {
-                    tokens.push(Token::Semicolon);
+                if *last != semicolon() {
+                    tokens.push(semicolon());
                 }
             }
             tokens.push(token);
@@ -34,7 +34,7 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
 
 fn assume_eof(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     if chars.peek().is_none() {
-        Ok(Some(Token::Eof))
+        Ok(Some(eof()))
     }
     else {
         Ok(None)
@@ -79,7 +79,7 @@ fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Opti
 fn assume_semicolon(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
     if is_semicolon(chars.peek()) {
         chars.next();
-        Ok(Some(Token::Semicolon))
+        Ok(Some(semicolon()))
     }
     else {
         Ok(None)
@@ -93,13 +93,13 @@ fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> 
             token.push(chars.next().unwrap());
         }
         if is_ty(&token) {
-            Ok(Some(Token::Ty))
+            Ok(Some(ty_keyword()))
         }
         else if is_fn(&token) {
-            Ok(Some(Token::Fn))
+            Ok(Some(fn_keyword()))
         }
         else {
-            Ok(Some(Token::Ident(token)))
+            Ok(Some(ident(token)))
         }
     }
     else {
@@ -113,7 +113,7 @@ fn assume_num(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option
         while is_num(chars.peek()) {
             token.push(chars.next().unwrap());
         }
-        Ok(Some(Token::Num(token)))
+        Ok(Some(num(token)))
     }
     else {
         Ok(None)
@@ -124,11 +124,11 @@ fn assume_paren(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Opti
     let c = chars.peek();
     if is_l_paren(c) {
         chars.next();
-        Ok(Some(Token::LParen))
+        Ok(Some(l_paren()))
     }
     else if is_r_paren(c) {
         chars.next();
-        Ok(Some(Token::RParen))
+        Ok(Some(r_paren()))
     }
     else {
         Ok(None)
@@ -142,13 +142,13 @@ fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) ->
             token.push(chars.next().unwrap());
         }
         if is_arrow(&token) {
-            Ok(Some(Token::Arrow))
+            Ok(Some(arrow()))
         }
         else if is_equal(&token) {
-            Ok(Some(Token::Equal))
+            Ok(Some(equal()))
         }
         else {
-            Ok(Some(Token::OpCode(token)))
+            Ok(Some(op_code(token)))
         }
     }
     else {

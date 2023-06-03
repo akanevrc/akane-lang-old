@@ -1,0 +1,45 @@
+use crate::data::*;
+
+pub fn eof() -> Token {
+    Token::Eof
+}
+
+pub fn semicolon() -> Token {
+    Token::Semicolon
+}
+
+pub fn ident(s: String) -> Token {
+    Token::Ident(s)
+}
+
+pub fn num(s: String) -> Token {
+    Token::Num(s)
+}
+
+pub fn op_code(s: String) -> Token {
+    Token::OpCode(s)
+}
+
+pub fn ty_keyword() -> Token {
+    Token::Ty
+}
+
+pub fn fn_keyword() -> Token {
+    Token::Fn
+}
+
+pub fn arrow() -> Token {
+    Token::Arrow
+}
+
+pub fn equal() -> Token {
+    Token::Equal
+}
+
+pub fn l_paren() -> Token {
+    Token::LParen
+}
+
+pub fn r_paren() -> Token {
+    Token::RParen
+}

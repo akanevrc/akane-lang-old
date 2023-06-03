@@ -2,16 +2,7 @@ use std::rc::Rc;
 use crate::{
     impl_sem_val,
     impl_sem_key,
-    data::context::SemContext,
-};
-use super::{
-    Sem,
-    SemVal,
-    qual_sem::{
-        QualSem,
-        QualKey,
-    },
-    ty_sem::TySem,
+    data::*,
 };
 
 #[derive(Clone, Debug)]

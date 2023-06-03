@@ -1,51 +1,19 @@
-use super::Token;
+use crate::data::*;
 
 fn lex(input: &str) -> Vec<Token> {
     super::lex(input.to_owned()).unwrap()
 }
 
-fn eof() -> Token {
-    Token::Eof
-}
-
-fn semicolon() -> Token {
-    Token::Semicolon
-}
-
 fn ident(s: &str) -> Token {
-    Token::Ident(s.to_owned())
+    crate::data::ident(s.to_owned())
 }
 
 fn num(s: &str) -> Token {
-    Token::Num(s.to_owned())
+    crate::data::num(s.to_owned())
 }
 
 fn op_code(s: &str) -> Token {
-    Token::OpCode(s.to_owned())
-}
-
-fn ty_keyword() -> Token {
-    Token::Ty
-}
-
-fn fn_keyword() -> Token {
-    Token::Fn
-}
-
-fn arrow() -> Token {
-    Token::Arrow
-}
-
-fn equal() -> Token {
-    Token::Equal
-}
-
-fn l_paren() -> Token {
-    Token::LParen
-}
-
-fn r_paren() -> Token {
-    Token::RParen
+    crate::data::op_code(s.to_owned())
 }
 
 #[test]

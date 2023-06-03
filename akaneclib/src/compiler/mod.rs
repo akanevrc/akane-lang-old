@@ -1,10 +1,7 @@
 use std::fs;
 use anyhow::Result;
 use crate::{
-    data::{
-        context::SemContext,
-        llvm::LLVM,
-    },
+    data::*,
     lexer,
     parser,
     semantizer,

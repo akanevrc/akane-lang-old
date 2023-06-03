@@ -3,41 +3,7 @@ use anyhow::{
     bail,
     Result,
 };
-use crate::data::{
-    ast::{
-        TopDefEnum,
-        FnDefAst,
-        TyExprAst,
-        TyExprEnum,
-        TyArrowAst,
-        TyIdentAst,
-        LeftFnDefAst,
-        ExprAst,
-        ExprEnum,
-        FnAst,
-        PrefixOpAst,
-        InfixOpAst,
-        IdentAst,
-        NumAst,
-        HasRefCell,
-    },
-    semantics::{
-        SemVal,
-        SemKey,
-        scope_sem::ScopeSem,
-        qual_sem::{
-            QualSem,
-            QualKey,
-        },
-        ty_sem::TySem,
-        fn_sem::{
-            FnSem,
-            FnKey,
-        },
-    },
-    thunk::Thunk,
-    context::SemContext,
-};
+use crate::data::*;
 
 pub fn semantize(ctx: &mut SemContext, top_def_enums: &[TopDefEnum]) -> Result<()> {
     for top_def_enum in top_def_enums {

@@ -1,35 +1,11 @@
-pub mod qual_stack;
-pub mod store;
+mod qual_stack;
+mod store;
+
+pub use qual_stack::*;
+pub use store::*;
 
 use std::rc::Rc;
-use super::semantics::{
-    SemKey,
-    scope_sem::ScopeSem,
-    qual_sem::{
-        QualSem,
-        QualKey,
-    },
-    ty_sem::{
-        TySem,
-        TyKey,
-    },
-    ty2_sem::{
-        Ty2Sem,
-        Ty2Key,
-    },
-    ty1_sem::{
-        Ty1Sem,
-        Ty1Key,
-    },
-    fn_sem::{
-        FnSem,
-        FnKey,
-    },
-};
-use self::{
-    qual_stack::QualStack,
-    store::Store,
-};
+use crate::data::*;
 
 pub struct SemContext {
     pub qual_stack: QualStack,

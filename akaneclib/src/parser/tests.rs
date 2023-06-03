@@ -1,95 +1,33 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-};
-use crate::data::ast::{
-    TopDefEnum,
-    FnDefAst,
-    TyExprAst,
-    TyExprEnum,
-    TyArrowAst,
-    TyIdentAst,
-    LeftFnDefAst,
-    ExprAst,
-    ExprEnum,
-    FnAst,
-    PrefixOpAst,
-    InfixOpAst,
-    IdentAst,
-    NumAst,
-};
+use crate::data::*;
 
 fn parse(s: &str) -> Vec<TopDefEnum> {
     super::parse(crate::lexer::lex(s.to_owned()).unwrap()).unwrap()
 }
 
-fn top_fn_def_ast(fn_def_ast: FnDefAst) -> TopDefEnum {
-    TopDefEnum::Fn(fn_def_ast)
-}
-
-fn fn_def_ast(ty_annot: Option<TyExprAst>, left_fn_def: LeftFnDefAst, expr: ExprAst) -> FnDefAst {
-    FnDefAst { ty_annot, left_fn_def, expr, fn_sem: RefCell::new(None), arg_sems: RefCell::new(None) }
-}
-
-fn ty_arrow_expr_ast(ty_arrow: TyArrowAst) -> TyExprAst {
-    TyExprAst { expr_enum: TyExprEnum::Arrow(ty_arrow), ty_sem: RefCell::new(None) }
-}
-
-fn ty_ident_expr_ast(ty_ident: TyIdentAst) -> TyExprAst {
-    TyExprAst { expr_enum: TyExprEnum::Ident(ty_ident), ty_sem: RefCell::new(None) }
-}
-
-fn ty_arrow_ast(lhs: TyExprAst, rhs: TyExprAst) -> TyArrowAst {
-    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None) }
-}
-
 fn ty_ident_ast(name: &str) -> TyIdentAst {
-    TyIdentAst { name: name.to_owned(), ty_sem: RefCell::new(None) }
+    crate::data::ty_ident_ast(name.to_owned())
 }
 
-fn left_fn_def_ast(name: &str, args: Vec<&str>) -> LeftFnDefAst {
-    LeftFnDefAst { name: name.to_owned(), args: args.into_iter().map(|s| s.to_owned()).collect() }
-}
-
-fn fn_expr_ast(fn_ast: FnAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Fn(fn_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-fn prefix_op_expr_ast(prefix_op_ast: PrefixOpAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::PrefixOp(prefix_op_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-fn infix_op_expr_ast(infix_op_ast: InfixOpAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::InfixOp(infix_op_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-fn ident_expr_ast(ident_ast: IdentAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Ident(ident_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-fn num_expr_ast(num_ast: NumAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Num(num_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-fn fn_ast(fn_expr: ExprAst, arg_expr: ExprAst) -> FnAst {
-    FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+fn left_fn_def_ast(name: &str, args: &[&str]) -> LeftFnDefAst {
+    crate::data::left_fn_def_ast(name.to_owned(), args.to_owned().into_iter().map(|s| s.to_owned()).collect())
 }
 
 fn prefix_op_ast(op_code: &str, rhs: ExprAst) -> PrefixOpAst {
-    PrefixOpAst { op_code: op_code.to_owned(), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+    crate::data::prefix_op_ast(op_code.to_owned(), rhs)
 }
 
 fn infix_op_ast(op_code: &str, lhs: ExprAst, rhs: ExprAst) -> InfixOpAst {
-    InfixOpAst { op_code: op_code.to_owned(), lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+    crate::data::infix_op_ast(op_code.to_owned(), lhs, rhs)
 }
 
 fn ident_ast(name: &str) -> IdentAst {
-    IdentAst { name: name.to_owned(), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+    crate::data::ident_ast(name.to_owned())
 }
 
 fn num_ast(value: &str) -> NumAst {
-    NumAst { value: value.to_owned(), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+    crate::data::num_ast(value.to_owned())
 }
+
 
 #[test]
 fn parse_empty() {
@@ -103,7 +41,7 @@ fn parse_arg() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec!["a"]),
+                left_fn_def_ast("f", &["a"]),
                 num_expr_ast(num_ast("0"))
             )
         )]
@@ -113,7 +51,7 @@ fn parse_arg() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec!["a", "b"]),
+                left_fn_def_ast("f", &["a", "b"]),
                 infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
             )
         )]
@@ -127,7 +65,7 @@ fn parse_ident() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 ident_expr_ast(ident_ast("a"))
             )
         )]
@@ -137,7 +75,7 @@ fn parse_ident() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 ident_expr_ast(ident_ast("f"))
             )
         )]
@@ -151,7 +89,7 @@ fn parse_num() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 num_expr_ast(num_ast("0"))
             )
         )]
@@ -161,7 +99,7 @@ fn parse_num() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 num_expr_ast(num_ast("123"))
             )
         )]
@@ -175,7 +113,7 @@ fn parse_fn() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a"))))
             )
         )]
@@ -185,7 +123,7 @@ fn parse_fn() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 fn_expr_ast(fn_ast(
                     fn_expr_ast(fn_ast(
                         ident_expr_ast(ident_ast("g")),
@@ -205,7 +143,7 @@ fn parse_infix_op() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), num_expr_ast(num_ast("1"))))
             )
         )]
@@ -215,7 +153,7 @@ fn parse_infix_op() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
                     infix_op_expr_ast(infix_op_ast(
@@ -237,7 +175,7 @@ fn parse_paren() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
                     infix_op_expr_ast(infix_op_ast(
@@ -255,7 +193,7 @@ fn parse_paren() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 infix_op_expr_ast(infix_op_ast(
                     "+",
                     ident_expr_ast(ident_ast("a")),
@@ -277,7 +215,7 @@ fn parse_prefix_op() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 prefix_op_expr_ast(prefix_op_ast("-", num_expr_ast(num_ast("1"))))
             )
         )]
@@ -287,7 +225,7 @@ fn parse_prefix_op() {
         &[top_fn_def_ast(
             fn_def_ast(
                 None,
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 infix_op_expr_ast(
                     infix_op_ast(
                         "+",
@@ -307,7 +245,7 @@ fn parse_ty_annot() {
         &[top_fn_def_ast(
             fn_def_ast(
                 Some(ty_ident_expr_ast(ty_ident_ast("i32"))),
-                left_fn_def_ast("f", vec![]),
+                left_fn_def_ast("f", &[]),
                 num_expr_ast(num_ast("0"))
             )
         )]
@@ -323,7 +261,7 @@ fn parse_ty_annot() {
                         ty_ident_expr_ast(ty_ident_ast("i32")),
                     ))
                 ))),
-                left_fn_def_ast("f", vec!["a", "b"]),
+                left_fn_def_ast("f", &["a", "b"]),
                 infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
             )
         )]

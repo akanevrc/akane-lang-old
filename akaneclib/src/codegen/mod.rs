@@ -4,29 +4,7 @@ use anyhow::{
     Result,
 };
 use llvm_sys::prelude::LLVMValueRef;
-use crate::{
-    data::{
-        ast::{
-            TopDefEnum,
-            FnDefAst,
-            LeftFnDefAst,
-            ExprAst,
-            ExprEnum,
-            FnAst,
-            PrefixOpAst,
-            InfixOpAst,
-            IdentAst,
-            NumAst,
-            HasRefCell,
-        },
-        semantics::{
-            Sem,
-            fn_sem::FnSem,
-        },
-        thunk::Thunk,
-        llvm::LLVM,
-    },
-};
+use crate::data::*;
 
 pub fn compile(llvm: &mut LLVM, top_def_enums: &[TopDefEnum]) -> Result<()> {
     for top_def_enum in top_def_enums {

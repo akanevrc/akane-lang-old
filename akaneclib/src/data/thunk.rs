@@ -1,8 +1,5 @@
 use std::rc::Rc;
-use super::{
-    ast::ExprAst,
-    semantics::fn_sem::FnSem,
-};
+use crate::data::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Thunk {

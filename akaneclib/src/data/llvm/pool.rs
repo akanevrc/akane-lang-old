@@ -7,7 +7,7 @@ use std::{
     marker::PhantomData,
     pin::Pin,
 };
-use super::Ptr;
+use crate::data::*;
 
 pub struct CStrPool {
     c_strs: HashMap<*const i8, Pin<Box<CStr>>>,

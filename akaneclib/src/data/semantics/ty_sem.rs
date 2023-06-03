@@ -11,17 +11,7 @@ use anyhow::{
 };
 use crate::{
     impl_sem_key,
-    data::context::SemContext,
-};
-use super::{
-    Sem,
-    SemVal,
-    qual_sem::{
-        QualKey,
-        QualSem,
-    },
-    ty2_sem::Ty2Sem,
-    ty1_sem::Ty1Sem,
+    data::*,
 };
 
 #[derive(Clone, Debug)]

@@ -52,10 +52,7 @@ use llvm_sys::{
         LLVMValueRef,
     },
 };
-use pool::{
-    CStrPool,
-    SlicePool,
-};
+use pool::*;
 
 pub trait Ptr<T>: Copy {
     fn null() -> *mut T;

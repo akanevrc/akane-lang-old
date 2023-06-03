@@ -1,34 +1,12 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    cell::RefCell,
-    iter::Peekable,
-    rc::Rc,
-};
+use std::iter::Peekable;
 use anyhow::{
     bail,
     Result,
 };
-use crate::data::{
-    token::Token,
-    ast::{
-        TopDefEnum,
-        FnDefAst,
-        TyExprAst,
-        TyExprEnum,
-        TyArrowAst,
-        TyIdentAst,
-        LeftFnDefAst,
-        ExprAst,
-        ExprEnum,
-        FnAst,
-        PrefixOpAst,
-        InfixOpAst,
-        IdentAst,
-        NumAst,
-    },
-};
+use crate::data::*;
 
 pub fn parse(input: Vec<Token>) -> Result<Vec<TopDefEnum>> {
     let mut asts = Vec::new();
@@ -58,12 +36,12 @@ fn assume_eof(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
 fn assume_top_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TopDefEnum>> {
     let ret =
         if let Some(ast) = assume_fn_def(tokens)? {
-            Ok(Some(TopDefEnum::Fn(ast)))
+            Ok(Some(top_fn_def_ast(ast)))
         }
         else {
             return Ok(None)
         };
-    if let Some(_) = assume_simple_token(tokens, Token::Semicolon)? {
+    if let Some(_) = assume_simple_token(tokens, semicolon())? {
         ret
     }
     else {
@@ -73,22 +51,16 @@ fn assume_top_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
 
 fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<FnDefAst>> {
     let mut ty_annot = None;
-    if let Some(_) = assume_simple_token(tokens, Token::Ty)? {
+    if let Some(_) = assume_simple_token(tokens, ty_keyword())? {
         if let Some(ty_expr) = assume_ty_expr(tokens)? {
             ty_annot = Some(ty_expr);
         }
     }
-    if let Some(_) = assume_simple_token(tokens, Token::Fn)? {
+    if let Some(_) = assume_simple_token(tokens, fn_keyword())? {
         if let Some(left_fn_def) = assume_left_fn_def(tokens)? {
-            if let Some(_) = assume_simple_token(tokens, Token::Equal)? {
+            if let Some(_) = assume_simple_token(tokens, equal())? {
                 if let Some(expr) = assume_expr(tokens)? {
-                    return Ok(Some(FnDefAst {
-                        ty_annot,
-                        left_fn_def,
-                        expr,
-                        fn_sem: RefCell::new(None),
-                        arg_sems: RefCell::new(None)
-                    }));
+                    return Ok(Some(fn_def_ast(ty_annot, left_fn_def, expr)));
                 }
                 bail!("Expression required.");
             }
@@ -111,12 +83,7 @@ fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
         let mut expr_iter = exprs.into_iter().rev();
         let mut rhs = expr_iter.next().unwrap();
         for lhs in expr_iter {
-            rhs = TyExprAst {
-                expr_enum: TyExprEnum::Arrow(
-                    TyArrowAst { lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None) }
-                ),
-                ty_sem: RefCell::new(None)
-            };
+            rhs = ty_arrow_expr_ast(ty_arrow_ast(lhs, rhs));
         }
         Ok(Some(rhs))
     }
@@ -158,7 +125,7 @@ fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
 
 fn assume_ty_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
     if let Some(ident) = assume_ty_ident(tokens)? {
-        Ok(Some(TyExprAst { expr_enum: TyExprEnum::Ident(ident), ty_sem: RefCell::new(None) }))
+        Ok(Some(ty_ident_expr_ast(ident)))
     }
     else {
         Ok(None)
@@ -169,7 +136,7 @@ fn assume_ty_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result
     if let Some(Token::Ident(name)) = tokens.peek() {
         let name = name.to_owned();
         tokens.next();
-        Ok(Some(TyIdentAst { name, ty_sem: RefCell::new(None) }))
+        Ok(Some(ty_ident_ast(name)))
     }
     else {
         Ok(None)
@@ -184,7 +151,7 @@ fn assume_left_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Res
                 args.push(arg.name);
                 continue;
             }
-            return Ok(Some(LeftFnDefAst { name: ident.name, args }));
+            return Ok(Some(left_fn_def_ast(ident.name, args)));
         }
     }
     else {
@@ -196,13 +163,7 @@ fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     if let Some(lhs) = assume_prefix_op_lhs(tokens)? {
         let mut lhs = lhs;
         while let Some((op_code, rhs)) = assume_infix_op_rhs(tokens)? {
-            lhs = ExprAst {
-                expr_enum: ExprEnum::InfixOp(
-                    InfixOpAst { op_code, lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-                ),
-                ty_sem: RefCell::new(None),
-                thunk: RefCell::new(None),
-            };
+            lhs = infix_op_expr_ast(infix_op_ast(op_code, lhs, rhs));
         }
         Ok(Some(lhs))
     }
@@ -215,13 +176,7 @@ fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     if let Some(factor) = assume_factor(tokens)? {
         let mut term = factor;
         while let Some(f) = assume_factor(tokens)? {
-            term = ExprAst {
-                expr_enum: ExprEnum::Fn(
-                    FnAst { fn_expr: Rc::new(term), arg_expr: Rc::new(f), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-                ),
-                ty_sem: RefCell::new(None),
-                thunk: RefCell::new(None),
-            };
+            term = fn_expr_ast(fn_ast(term, f));
         }
         Ok(Some(term))
     }
@@ -236,13 +191,7 @@ fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> R
         if op_code == "-" {
             tokens.next();
             if let Some(term) = assume_term(tokens)? {
-                return Ok(Some(ExprAst {
-                    expr_enum: ExprEnum::PrefixOp(
-                        PrefixOpAst { op_code, rhs: Rc::new(term), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-                    ),
-                    ty_sem: RefCell::new(None),
-                    thunk: RefCell::new(None),
-                }));
+                return Ok(Some(prefix_op_expr_ast(prefix_op_ast(op_code, term))));
             }
             bail!("Term required.");
         }
@@ -275,10 +224,10 @@ fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
         Ok(Some(expr))
     }
     else if let Some(ident) = assume_ident(tokens)? {
-        Ok(Some(ExprAst { expr_enum: ExprEnum::Ident(ident), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }))
+        Ok(Some(ident_expr_ast(ident)))
     }
     else if let Some(num) = assume_num(tokens)? {
-        Ok(Some(ExprAst { expr_enum: ExprEnum::Num(num), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }))
+        Ok(Some(num_expr_ast(num)))
     }
     else {
         Ok(None)
@@ -306,7 +255,7 @@ fn assume_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Op
     if let Some(Token::Ident(name)) = tokens.peek() {
         let name = name.to_owned();
         tokens.next();
-        Ok(Some(IdentAst { name, thunk: RefCell::new(None), ty_sem: RefCell::new(None) }))
+        Ok(Some(ident_ast(name)))
     }
     else {
         Ok(None)
@@ -317,7 +266,7 @@ fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     if let Some(Token::Num(value)) = tokens.peek() {
         let value = value.to_owned();
         tokens.next();
-        Ok(Some(NumAst { value, ty_sem: RefCell::new(None), thunk: RefCell::new(None) }))
+        Ok(Some(num_ast(value)))
     }
     else {
         Ok(None)

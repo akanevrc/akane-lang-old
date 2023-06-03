@@ -3,13 +3,7 @@ use anyhow::{
     bail,
     Result,
 };
-use crate::data::semantics::{
-    SemVal,
-    qual_sem::{
-        QualSem,
-        QualKey,
-    },
-};
+use crate::data::*;
 
 pub struct QualStack {
     stack: Vec<QualKey>,

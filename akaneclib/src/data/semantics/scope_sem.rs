@@ -1,4 +1,4 @@
-use super::Sem;
+use crate::data::*;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ScopeSem {
