@@ -35,14 +35,8 @@ impl_has_ref_cell!(ExprAst, ty_sem, TySem);
 impl_has_ref_cell!(ExprAst, thunk, Thunk);
 impl_has_ref_cell!(FnAst, ty_sem, TySem);
 impl_has_ref_cell!(FnAst, thunk, Thunk);
-impl_has_ref_cell!(PrefixOpAst, ty_sem, TySem);
-impl_has_ref_cell!(PrefixOpAst, thunk, Thunk);
-impl_has_ref_cell!(InfixOpAst, ty_sem, TySem);
-impl_has_ref_cell!(InfixOpAst, thunk, Thunk);
 impl_has_ref_cell!(IdentAst, ty_sem, TySem);
 impl_has_ref_cell!(IdentAst, thunk, Thunk);
-impl_has_ref_cell!(NumAst, ty_sem, TySem);
-impl_has_ref_cell!(NumAst, thunk, Thunk);
 
 impl HasRefCell<TySem> for TyExprEnum {
     fn ref_cell(&self) -> &RefCell<Option<Rc<TySem>>> {
@@ -57,10 +51,7 @@ impl HasRefCell<TySem> for ExprEnum {
     fn ref_cell(&self) -> &RefCell<Option<Rc<TySem>>> {
         match self {
             Self::Fn(f) => f.ref_cell(),
-            Self::PrefixOp(prefix_op) => prefix_op.ref_cell(),
-            Self::InfixOp(infix_op) => infix_op.ref_cell(),
             Self::Ident(ident) => ident.ref_cell(),
-            Self::Num(num) => num.ref_cell(),
         }
     }
 }
@@ -69,10 +60,7 @@ impl HasRefCell<Thunk> for ExprEnum {
     fn ref_cell(&self) -> &RefCell<Option<Rc<Thunk>>> {
         match self {
             Self::Fn(f) => f.ref_cell(),
-            Self::PrefixOp(prefix_op) => prefix_op.ref_cell(),
-            Self::InfixOp(infix_op) => infix_op.ref_cell(),
             Self::Ident(ident) => ident.ref_cell(),
-            Self::Num(num) => num.ref_cell(),
         }
     }
 }

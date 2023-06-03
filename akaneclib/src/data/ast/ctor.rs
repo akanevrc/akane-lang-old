@@ -13,10 +13,7 @@ use super::{
     ExprAst,
     ExprEnum,
     FnAst,
-    PrefixOpAst,
-    InfixOpAst,
     IdentAst,
-    NumAst,
 };
 
 pub fn top_fn_def_ast(fn_def_ast: FnDefAst) -> TopDefEnum {
@@ -51,38 +48,31 @@ pub fn fn_expr_ast(fn_ast: FnAst) -> ExprAst {
     ExprAst { expr_enum: ExprEnum::Fn(fn_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
-pub fn prefix_op_expr_ast(prefix_op_ast: PrefixOpAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::PrefixOp(prefix_op_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-pub fn infix_op_expr_ast(infix_op_ast: InfixOpAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::InfixOp(infix_op_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
 pub fn ident_expr_ast(ident_ast: IdentAst) -> ExprAst {
     ExprAst { expr_enum: ExprEnum::Ident(ident_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-pub fn num_expr_ast(num_ast: NumAst) -> ExprAst {
-    ExprAst { expr_enum: ExprEnum::Num(num_ast), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
 pub fn fn_ast(fn_expr: ExprAst, arg_expr: ExprAst) -> FnAst {
     FnAst { fn_expr: Rc::new(fn_expr), arg_expr: Rc::new(arg_expr), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }
 
-pub fn prefix_op_ast(op_code: String, rhs: ExprAst) -> PrefixOpAst {
-    PrefixOpAst { op_code, rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+pub fn prefix_op_ast(op_code: String, rhs: ExprAst) -> FnAst {
+    fn_ast(
+        ident_expr_ast(ident_ast(op_code.to_owned())),
+        rhs,
+    )
 }
 
-pub fn infix_op_ast(op_code: String, lhs: ExprAst, rhs: ExprAst) -> InfixOpAst {
-    InfixOpAst { op_code, lhs: Rc::new(lhs), rhs: Rc::new(rhs), ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
+pub fn infix_op_ast(op_code: String, lhs: ExprAst, rhs: ExprAst) -> FnAst {
+    fn_ast(
+        fn_expr_ast(fn_ast(
+            ident_expr_ast(ident_ast(op_code)),
+            lhs,
+        )),
+        rhs,
+    )
 }
 
 pub fn ident_ast(name: String) -> IdentAst {
     IdentAst { name, ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
-}
-
-pub fn num_ast(value: String) -> NumAst {
-    NumAst { value, ty_sem: RefCell::new(None), thunk: RefCell::new(None) }
 }

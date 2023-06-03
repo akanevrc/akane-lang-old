@@ -12,22 +12,17 @@ fn left_fn_def_ast(name: &str, args: &[&str]) -> LeftFnDefAst {
     crate::data::left_fn_def_ast(name.to_owned(), args.to_owned().into_iter().map(|s| s.to_owned()).collect())
 }
 
-fn prefix_op_ast(op_code: &str, rhs: ExprAst) -> PrefixOpAst {
+fn prefix_op_ast(op_code: &str, rhs: ExprAst) -> FnAst {
     crate::data::prefix_op_ast(op_code.to_owned(), rhs)
 }
 
-fn infix_op_ast(op_code: &str, lhs: ExprAst, rhs: ExprAst) -> InfixOpAst {
+fn infix_op_ast(op_code: &str, lhs: ExprAst, rhs: ExprAst) -> FnAst {
     crate::data::infix_op_ast(op_code.to_owned(), lhs, rhs)
 }
 
 fn ident_ast(name: &str) -> IdentAst {
     crate::data::ident_ast(name.to_owned())
 }
-
-fn num_ast(value: &str) -> NumAst {
-    crate::data::num_ast(value.to_owned())
-}
-
 
 #[test]
 fn parse_empty() {
@@ -42,7 +37,7 @@ fn parse_arg() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &["a"]),
-                num_expr_ast(num_ast("0"))
+                ident_expr_ast(ident_ast("0"))
             )
         )]
     );
@@ -52,7 +47,7 @@ fn parse_arg() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &["a", "b"]),
-                infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
+                fn_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
             )
         )]
     );
@@ -90,7 +85,7 @@ fn parse_num() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                num_expr_ast(num_ast("0"))
+                ident_expr_ast(ident_ast("0"))
             )
         )]
     );
@@ -100,7 +95,7 @@ fn parse_num() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                num_expr_ast(num_ast("123"))
+                ident_expr_ast(ident_ast("123"))
             )
         )]
     );
@@ -144,7 +139,7 @@ fn parse_infix_op() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), num_expr_ast(num_ast("1"))))
+                fn_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("1"))))
             )
         )]
     );
@@ -154,9 +149,9 @@ fn parse_infix_op() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                infix_op_expr_ast(infix_op_ast(
+                fn_expr_ast(infix_op_ast(
                     "+",
-                    infix_op_expr_ast(infix_op_ast(
+                    fn_expr_ast(infix_op_ast(
                         "+",
                         fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("a")))),
                         fn_expr_ast(fn_ast(ident_expr_ast(ident_ast("g")), ident_expr_ast(ident_ast("b"))))
@@ -176,9 +171,9 @@ fn parse_paren() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                infix_op_expr_ast(infix_op_ast(
+                fn_expr_ast(infix_op_ast(
                     "+",
-                    infix_op_expr_ast(infix_op_ast(
+                    fn_expr_ast(infix_op_ast(
                         "+",
                         ident_expr_ast(ident_ast("a")),
                         ident_expr_ast(ident_ast("b"))
@@ -194,10 +189,10 @@ fn parse_paren() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                infix_op_expr_ast(infix_op_ast(
+                fn_expr_ast(infix_op_ast(
                     "+",
                     ident_expr_ast(ident_ast("a")),
-                    infix_op_expr_ast(infix_op_ast(
+                    fn_expr_ast(infix_op_ast(
                         "+",
                         ident_expr_ast(ident_ast("b")),
                         ident_expr_ast(ident_ast("c"))
@@ -216,7 +211,7 @@ fn parse_prefix_op() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                prefix_op_expr_ast(prefix_op_ast("-", num_expr_ast(num_ast("1"))))
+                fn_expr_ast(prefix_op_ast("'-", ident_expr_ast(ident_ast("1"))))
             )
         )]
     );
@@ -226,11 +221,11 @@ fn parse_prefix_op() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                infix_op_expr_ast(
+                fn_expr_ast(
                     infix_op_ast(
                         "+",
-                        prefix_op_expr_ast(prefix_op_ast("-", ident_expr_ast(ident_ast("a")))),
-                        num_expr_ast(num_ast("1"))
+                        fn_expr_ast(prefix_op_ast("'-", ident_expr_ast(ident_ast("a")))),
+                        ident_expr_ast(ident_ast("1"))
                     )
                 )
             )
@@ -246,7 +241,7 @@ fn parse_ty_annot() {
             fn_def_ast(
                 Some(ty_ident_expr_ast(ty_ident_ast("i32"))),
                 left_fn_def_ast("f", &[]),
-                num_expr_ast(num_ast("0"))
+                ident_expr_ast(ident_ast("0"))
             )
         )]
     );
@@ -262,7 +257,7 @@ fn parse_ty_annot() {
                     ))
                 ))),
                 left_fn_def_ast("f", &["a", "b"]),
-                infix_op_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
+                fn_expr_ast(infix_op_ast("+", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("b"))))
             )
         )]
     );

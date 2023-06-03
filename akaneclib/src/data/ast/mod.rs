@@ -65,10 +65,7 @@ pub struct ExprAst {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprEnum {
     Fn(FnAst),
-    PrefixOp(PrefixOpAst),
-    InfixOp(InfixOpAst),
     Ident(IdentAst),
-    Num(NumAst),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -80,32 +77,8 @@ pub struct FnAst {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PrefixOpAst {
-    pub op_code: String,
-    pub rhs: Rc<ExprAst>,
-    pub ty_sem: RefCell<Option<Rc<TySem>>>,
-    pub thunk: RefCell<Option<Rc<Thunk>>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct InfixOpAst {
-    pub op_code: String,
-    pub lhs: Rc<ExprAst>,
-    pub rhs: Rc<ExprAst>,
-    pub ty_sem: RefCell<Option<Rc<TySem>>>,
-    pub thunk: RefCell<Option<Rc<Thunk>>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct IdentAst {
     pub name: String,
-    pub ty_sem: RefCell<Option<Rc<TySem>>>,
-    pub thunk: RefCell<Option<Rc<Thunk>>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct NumAst {
-    pub value: String,
     pub ty_sem: RefCell<Option<Rc<TySem>>>,
     pub thunk: RefCell<Option<Rc<Thunk>>>,
 }

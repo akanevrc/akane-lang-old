@@ -163,7 +163,7 @@ fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     if let Some(lhs) = assume_prefix_op_lhs(tokens)? {
         let mut lhs = lhs;
         while let Some((op_code, rhs)) = assume_infix_op_rhs(tokens)? {
-            lhs = infix_op_expr_ast(infix_op_ast(op_code, lhs, rhs));
+            lhs = fn_expr_ast(infix_op_ast(op_code, lhs, rhs));
         }
         Ok(Some(lhs))
     }
@@ -187,11 +187,11 @@ fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
 
 fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
     if let Some(Token::OpCode(op_code)) = tokens.peek() {
-        let op_code = op_code.to_owned();
-        if op_code == "-" {
+        let op_code = format!("'{}", op_code);
+        if op_code == "'-" {
             tokens.next();
             if let Some(term) = assume_term(tokens)? {
-                return Ok(Some(prefix_op_expr_ast(prefix_op_ast(op_code, term))));
+                return Ok(Some(fn_expr_ast(prefix_op_ast(op_code, term))));
             }
             bail!("Term required.");
         }
@@ -227,7 +227,7 @@ fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
         Ok(Some(ident_expr_ast(ident)))
     }
     else if let Some(num) = assume_num(tokens)? {
-        Ok(Some(num_expr_ast(num)))
+        Ok(Some(ident_expr_ast(num)))
     }
     else {
         Ok(None)
@@ -262,11 +262,11 @@ fn assume_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Op
     }
 }
 
-fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<NumAst>> {
+fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<IdentAst>> {
     if let Some(Token::Num(value)) = tokens.peek() {
         let value = value.to_owned();
         tokens.next();
-        Ok(Some(num_ast(value)))
+        Ok(Some(ident_ast(value)))
     }
     else {
         Ok(None)

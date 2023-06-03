@@ -62,14 +62,8 @@ fn gen_expr(llvm: &mut LLVM, expr_ast: &ExprAst) -> Result<Option<LLVMValueRef>>
     match &expr_ast.expr_enum {
         ExprEnum::Fn(fn_ast) =>
             gen_fn(llvm, fn_ast),
-        ExprEnum::PrefixOp(prefix_op_ast) =>
-            gen_prefix_op(llvm, prefix_op_ast),
-        ExprEnum::InfixOp(infix_op_ast) =>
-            gen_infix_op(llvm, infix_op_ast),
         ExprEnum::Ident(ident_ast) =>
             gen_ident(llvm, ident_ast),
-        ExprEnum::Num(num_ast) =>
-            gen_num(llvm, num_ast),
     }?;
     let thunk = HasRefCell::<Thunk>::get_rc(expr_ast);
     if thunk.is_callable() {
@@ -113,19 +107,7 @@ fn gen_fn(llvm: &mut LLVM, fn_ast: &FnAst) -> Result<Option<LLVMValueRef>> {
     gen_expr(llvm, &fn_ast.fn_expr)
 }
 
-fn gen_prefix_op(_llvm: &mut LLVM, _prefix_op_ast: &PrefixOpAst) -> Result<Option<LLVMValueRef>> {
-    panic!("Not implemented.")
-}
-
-fn gen_infix_op(_llvm: &mut LLVM, _infix_op_ast: &InfixOpAst) -> Result<Option<LLVMValueRef>> {
-    Ok(None)
-}
-
 fn gen_ident(_llvm: &mut LLVM, _ident_ast: &IdentAst) -> Result<Option<LLVMValueRef>> {
-    Ok(None)
-}
-
-fn gen_num(_llvm: &mut LLVM, _num_ast: &NumAst) -> Result<Option<LLVMValueRef>> {
     Ok(None)
 }
 

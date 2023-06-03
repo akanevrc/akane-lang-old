@@ -101,14 +101,8 @@ fn visit_expr(ctx: &mut SemContext, expr_ast: &ExprAst) -> Result<()> {
     match &expr_ast.expr_enum {
         ExprEnum::Fn(fn_ast) =>
             visit_fn(ctx, fn_ast)?,
-        ExprEnum::PrefixOp(prefix_op_ast) =>
-            visit_prefix_op(ctx, prefix_op_ast)?,
-        ExprEnum::InfixOp(infix_op_ast) =>
-            visit_infix_op(ctx, infix_op_ast)?,
         ExprEnum::Ident(ident_ast) =>
             visit_ident(ctx, ident_ast)?,
-        ExprEnum::Num(num_ast) =>
-            visit_num(ctx, num_ast)?,
     }
     HasRefCell::<TySem>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
     HasRefCell::<Thunk>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
@@ -135,27 +129,9 @@ fn visit_fn(ctx: &mut SemContext, fn_ast: &FnAst) -> Result<()> {
             let thunk = Thunk::new(prev_thunk.fn_sem.clone(), vec![fn_ast.arg_expr.clone()]);
             (ty, thunk)
         },
-        _ => bail!("Unsupported function evaluation."),
     };
     fn_ast.set_rc(ty);
     fn_ast.set_rc(thunk);
-    Ok(())
-}
-
-fn visit_prefix_op(ctx: &mut SemContext, prefix_op_ast: &PrefixOpAst) -> Result<()> {
-    visit_expr(ctx, &prefix_op_ast.rhs)?;
-    HasRefCell::<TySem>::set_rc(prefix_op_ast, prefix_op_ast.rhs.get_rc());
-    Ok(())
-}
-
-fn visit_infix_op(ctx: &mut SemContext, infix_op_ast: &InfixOpAst) -> Result<()> {
-    visit_expr(ctx, &infix_op_ast.lhs)?;
-    visit_expr(ctx, &infix_op_ast.rhs)?;
-    let f = FnKey::new(QualKey::top(), infix_op_ast.op_code.clone()).get(ctx)?;
-    let (_, ret_ty) = f.ty.clone().to_arg_and_ret_tys();
-    let thunk = Thunk::new(f, vec![infix_op_ast.lhs.clone(), infix_op_ast.rhs.clone()]);
-    HasRefCell::<TySem>::set_rc(infix_op_ast, ret_ty);
-    HasRefCell::<Thunk>::set_rc(infix_op_ast, thunk);
     Ok(())
 }
 
@@ -166,18 +142,21 @@ fn visit_ident(ctx: &mut SemContext, ident_ast: &IdentAst) -> Result<()> {
     if let Some(f) = f_opt {
         ident_ast.set_rc(f.ty.clone());
         ident_ast.set_rc(Thunk::new(f, Vec::new()));
+        Ok(())
+    }
+    else if is_num(&ident_ast.name) {
+        let top = QualSem::top(ctx);
+        let i32_ty = TySem::get_from_name(ctx, "i32")?;
+        let f = FnSem::new_or_get(ctx, top, ident_ast.name.clone(), i32_ty.clone());
+        ident_ast.set_rc(i32_ty);
+        ident_ast.set_rc(Thunk::new(f, Vec::new()));
+        Ok(())
     }
     else {
         bail!("Unknown function.");
     }
-    Ok(())
 }
 
-fn visit_num(ctx: &mut SemContext, num_ast: &NumAst) -> Result<()> {
-    let top = QualSem::top(ctx);
-    let i32_ty = TySem::get_from_name(ctx, "i32")?;
-    let f = FnSem::new_or_get(ctx, top, num_ast.value.clone(), i32_ty.clone());
-    num_ast.set_rc(i32_ty);
-    num_ast.set_rc(Thunk::new(f, Vec::new()));
-    Ok(())
+fn is_num(name: &str) -> bool {
+    name.chars().next().map_or(false, |c| c.is_ascii_digit())
 }
