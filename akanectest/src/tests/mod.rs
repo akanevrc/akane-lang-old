@@ -30,3 +30,19 @@ fn eval_add() {
         assert_eq!(ffi::eval_add(3, 5), 8);
     }
 }
+
+#[test]
+fn double() {
+    unsafe {
+        assert_eq!(ffi::double(1, 1), 4);
+        assert_eq!(ffi::double(3, 5), 16);
+    }
+}
+
+#[test]
+fn add_paren() {
+    unsafe {
+        assert_eq!(ffi::eval_add(1, 1), 2);
+        assert_eq!(ffi::eval_add(3, 5), 8);
+    }
+}

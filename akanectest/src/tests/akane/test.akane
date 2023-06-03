@@ -9,3 +9,9 @@ fn add a b = a + b;
 
 ty i32 -> i32 -> i32
 fn eval_add a b = add a b;
+
+ty i32 -> i32 -> i32
+fn double a b = add (add a b) (add a b);
+
+ty i32 -> i32 -> i32
+fn add_paren a b = (add a) b;
