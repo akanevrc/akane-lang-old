@@ -25,8 +25,15 @@ use crate::data::{
         SemVal,
         SemKey,
         scope_sem::ScopeSem,
+        qual_sem::{
+            QualSem,
+            QualKey,
+        },
         ty_sem::TySem,
-        fn_sem::FnSem,
+        fn_sem::{
+            FnSem,
+            FnKey,
+        },
     },
     thunk::Thunk,
     context::SemContext,
@@ -59,7 +66,7 @@ fn visit_fn_def(ctx: &mut SemContext, fn_def_ast: &FnDefAst) -> Result<()> {
             let i32_ty = TySem::get_from_name(ctx, "i32")?;
             let fn_in_tys = vec![i32_ty.clone(); arg_names.len()];
             let fn_out_ty = i32_ty.clone();
-            TySem::new_or_get_fn_ty(ctx, qual.clone(), fn_in_tys, fn_out_ty)?
+            TySem::new_or_get_fn_ty(ctx, qual.clone(), fn_in_tys, fn_out_ty)
         };
     let fn_res = FnSem::new(ctx, qual, name.clone(), fn_ty.clone());
     match fn_res {
@@ -138,6 +145,7 @@ fn visit_expr(ctx: &mut SemContext, expr_ast: &ExprAst) -> Result<()> {
             visit_num(ctx, num_ast)?,
     }
     HasRefCell::<TySem>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
+    HasRefCell::<Thunk>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
     Ok(())
 }
 
@@ -177,7 +185,11 @@ fn visit_prefix_op(ctx: &mut SemContext, prefix_op_ast: &PrefixOpAst) -> Result<
 fn visit_infix_op(ctx: &mut SemContext, infix_op_ast: &InfixOpAst) -> Result<()> {
     visit_expr(ctx, &infix_op_ast.lhs)?;
     visit_expr(ctx, &infix_op_ast.rhs)?;
-    HasRefCell::<TySem>::set_rc(infix_op_ast, infix_op_ast.lhs.get_rc());
+    let f = FnKey::new(QualKey::top(), infix_op_ast.op_code.clone()).get(ctx)?;
+    let (_, ret_ty) = f.ty.clone().to_arg_and_ret_tys();
+    let thunk = Thunk::new(f, vec![infix_op_ast.lhs.clone(), infix_op_ast.rhs.clone()]);
+    HasRefCell::<TySem>::set_rc(infix_op_ast, ret_ty);
+    HasRefCell::<Thunk>::set_rc(infix_op_ast, thunk);
     Ok(())
 }
 
@@ -196,9 +208,9 @@ fn visit_ident(ctx: &mut SemContext, ident_ast: &IdentAst) -> Result<()> {
 }
 
 fn visit_num(ctx: &mut SemContext, num_ast: &NumAst) -> Result<()> {
-    let qual = ctx.qual_stack.peek().get_val(ctx)?;
+    let top = QualSem::top(ctx);
     let i32_ty = TySem::get_from_name(ctx, "i32")?;
-    let f = FnSem::new_or_get(ctx, qual, num_ast.value.clone(), i32_ty.clone());
+    let f = FnSem::new_or_get(ctx, top, num_ast.value.clone(), i32_ty.clone());
     num_ast.set_rc(i32_ty);
     num_ast.set_rc(Thunk::new(f, Vec::new()));
     Ok(())

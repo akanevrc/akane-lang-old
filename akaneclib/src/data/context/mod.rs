@@ -51,7 +51,9 @@ impl SemContext {
             fn_store: Store::<FnKey, FnSem>::new(),
         };
         let top = QualSem::top(&mut ctx);
-        TySem::new_or_get_ty1(&mut ctx, top, "i32".to_owned());
+        let i32_ty = TySem::new_or_get_ty1(&mut ctx, top.clone(), "i32".to_owned());
+        let i32_bin_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i32_ty.clone(), i32_ty.clone()], i32_ty);
+        FnSem::new_or_get(&mut ctx, top, "+".to_owned(), i32_bin_op_ty);
         ctx
     }
 

@@ -116,12 +116,12 @@ impl TySem {
         ctx.ty_store.insert_or_get(key, val)
     }
 
-    pub fn new_or_get_fn_ty(ctx: &mut SemContext, qual: Rc<QualSem>, in_tys: Vec<Rc<TySem>>, out_ty: Rc<TySem>) -> Result<Rc<Self>> {
+    pub fn new_or_get_fn_ty(ctx: &mut SemContext, qual: Rc<QualSem>, in_tys: Vec<Rc<TySem>>, out_ty: Rc<TySem>) -> Rc<Self> {
         let mut ty = out_ty;
         for in_ty in in_tys.into_iter().rev() {
             ty = Self::new_or_get_ty2(ctx, qual.clone(), in_ty, ty);
         }
-        Ok(ty)
+        ty
     }
 
     pub fn get_from_name(ctx: &SemContext, name: &str) -> Result<Rc<Self>> {

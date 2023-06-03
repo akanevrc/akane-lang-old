@@ -57,7 +57,7 @@ impl Sem for Ty1Key {
 impl Ty1Sem {
     pub fn new_or_get(ctx: &mut SemContext, qual: Rc<QualSem>, name: String) -> Rc<Self> {
         let val = Rc::new(Self {
-            id: ctx.fn_store.next_id(),
+            id: ctx.ty1_store.next_id(),
             qual,
             name,
         });

@@ -1,6 +1,13 @@
 mod ffi;
 
 #[test]
+fn one() {
+    unsafe {
+        assert_eq!(ffi::one(), 1);
+    }
+}
+
+#[test]
 fn add_one() {
     unsafe {
         assert_eq!(ffi::add_one(1), 2);
@@ -17,9 +24,9 @@ fn add() {
 }
 
 #[test]
-fn call_add() {
+fn eval_add() {
     unsafe {
-        assert_eq!(ffi::call_add(1, 1, 1, 1), 4);
-        assert_eq!(ffi::call_add(3, 5, 7, 9), 24);
+        assert_eq!(ffi::eval_add(1, 1), 2);
+        assert_eq!(ffi::eval_add(3, 5), 8);
     }
 }

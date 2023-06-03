@@ -62,7 +62,7 @@ impl Ty2Sem {
     pub fn new_or_get(ctx: &mut SemContext, qual: Rc<QualSem>, in_ty: Rc<TySem>, out_ty: Rc<TySem>) -> Rc<Self> {
         let rank = out_ty.rank() + 1;
         let val = Rc::new(Self {
-            id: ctx.fn_store.next_id(),
+            id: ctx.ty2_store.next_id(),
             qual,
             name: Self::name(&in_ty, &out_ty),
             in_ty,
