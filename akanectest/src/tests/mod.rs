@@ -42,7 +42,7 @@ fn double() {
 #[test]
 fn add_paren() {
     unsafe {
-        assert_eq!(ffi::eval_add(1, 1), 2);
-        assert_eq!(ffi::eval_add(3, 5), 8);
+        assert_eq!(ffi::add_paren(1, 1), 2);
+        assert_eq!(ffi::add_paren(3, 5), 8);
     }
 }
