@@ -1,136 +1,86 @@
+mod llvm;
+
 use std::rc::Rc;
 use anyhow::{
     bail,
     Result,
 };
-use llvm_sys::prelude::LLVMValueRef;
+use llvm_sys::prelude::*;
 use crate::data::*;
 
-pub fn compile(llvm: &mut LLVM, top_def_enums: &[TopDefEnum]) -> Result<()> {
+pub fn compile(llvm: &mut LLVM, ctx: &SemContext, top_def_enums: &[TopDefEnum]) -> Result<()> {
+    llvm::gen_init(llvm, ctx)?;
     for top_def_enum in top_def_enums {
-        gen_top_def(llvm, top_def_enum)?;
+        gen_top_def(llvm, ctx, top_def_enum)?;
     }
     Ok(())
 }
 
-fn gen_top_def(llvm: &mut LLVM, top_def_enum: &TopDefEnum) -> Result<LLVMValueRef> {
+fn gen_top_def(llvm: &mut LLVM, ctx: &SemContext, top_def_enum: &TopDefEnum) -> Result<()> {
     match top_def_enum {
         TopDefEnum::Fn(fn_def_ast) =>
-            gen_fn_def(llvm, fn_def_ast),
+            gen_fn_def(llvm, ctx, fn_def_ast),
     }
 }
 
-fn gen_fn_def(llvm: &mut LLVM, fn_def_ast: &FnDefAst) -> Result<LLVMValueRef> {
-    let fn_value = match llvm.get_named_function(&fn_def_ast.left_fn_def.name) {
-        Ok(f) => f,
-        Err(_) => gen_left_fn_def(llvm, &fn_def_ast.left_fn_def)?,
-    };
-    llvm.clear_named_value();
-    let rank = fn_def_ast.left_fn_def.args.len();
-    let args = HasRefCell::<Vec<Rc<FnSem>>>::get_rc(fn_def_ast);
-    for i in 0..rank {
-        let arg = LLVM::get_param(fn_value, i)?;
-        let name = &args[i].logical_name();
-        llvm.set_value_name(arg, name);
-        llvm.insert_named_value(name.to_owned(), arg)?;
-    }
-    gen_llvm_block(llvm, fn_value,
-        |llvm| {
-            match gen_expr(llvm, &fn_def_ast.expr)? {
-                Some(expr) => llvm.build_ret(expr)?,
-                None => llvm.build_ret_void()?,
-            };
-            Ok(())
-        }
-    )?;
-    Ok(fn_value)
+fn gen_fn_def(llvm: &mut LLVM, ctx: &SemContext, fn_def_ast: &FnDefAst) -> Result<()> {
+    let fn_key = HasRefCell::<FnKey>::get_rc(fn_def_ast);
+    let args =
+        HasRefCell::<Vec<Rc<FnSem>>>::get_rc(fn_def_ast).iter()
+        .map(|arg| arg.logical_name())
+        .collect::<Vec<_>>();
+    llvm::gen_fn_def(llvm, ctx, &fn_key, &args, |llvm| gen_expr(llvm, &fn_def_ast.expr))?;
+    llvm::gen_exported_fn(llvm, ctx, &fn_key, &args)?;
+    Ok(())
 }
 
-fn gen_left_fn_def(llvm: &mut LLVM, left_fn_def_ast: &LeftFnDefAst) -> Result<LLVMValueRef> {
-    let rank = left_fn_def_ast.args.len();
-    let i32_ty = llvm.int32_type()?;
-    let arg_tys = vec![i32_ty; rank];
-    let fn_ty = llvm.function_type(i32_ty, arg_tys)?;
-    let fn_value_res = llvm.add_function(&left_fn_def_ast.name, fn_ty);
-    match fn_value_res {
-        Ok(f) => Ok(f),
-        Err(_) => bail!("Cannot create function."),
-    }
-}
-
-fn gen_expr(llvm: &mut LLVM, expr_ast: &ExprAst) -> Result<Option<LLVMValueRef>> {
+fn gen_expr(llvm: &mut LLVM, expr_ast: &ExprAst) -> Result<LLVMValueRef> {
     match &expr_ast.expr_enum {
         ExprEnum::Fn(fn_ast) =>
             gen_fn(llvm, fn_ast),
         ExprEnum::Ident(ident_ast) =>
             gen_ident(llvm, ident_ast),
-    }?;
-    let thunk = HasRefCell::<Thunk>::get_rc(expr_ast);
-    if thunk.is_callable() {
-        match thunk.fn_sem.logical_name().as_str() {
-            "+" => {
-                let lhs = gen_expr(llvm, &thunk.args[0])?.unwrap();
-                let rhs = gen_expr(llvm, &thunk.args[1])?.unwrap();
-                Ok(Some(llvm.build_add(lhs, rhs, "addtmp")?))
-            },
-            name => {
-                if let Ok(value) = name.parse() {
-                    Ok(Some(llvm.const_int(value, 0)?))
-                }
-                else if let Ok(value) = llvm.get_named_value(name) {
-                    Ok(Some(value))
-                }
-                else if llvm.get_named_function(name).is_ok() {
-                    let fn_value = llvm.get_named_function(&thunk.fn_sem.logical_name())?;
-                    let i32_ty = llvm.int32_type()?;
-                    let arg_tys = vec![i32_ty; thunk.fn_sem.rank];
-                    let fn_ty = llvm.function_type(i32_ty, arg_tys)?;
-                    let args =
-                        thunk.args.iter()
-                        .cloned()
-                        .map(|arg| Ok(gen_expr(llvm, arg.as_ref())?.unwrap()))
-                        .collect::<Result<_>>()?;
-                    Ok(Some(llvm.build_call(fn_ty, fn_value, args, "calltmp")?))
-                }
-                else {
-                    bail!("Unknown identifier.")
-                }
-            },
+    }
+}
+
+fn gen_fn(llvm: &mut LLVM, fn_ast: &FnAst) -> Result<LLVMValueRef> {
+    let fn_thunk = gen_expr(llvm, &fn_ast.fn_expr)?;
+    let arg_thunk = gen_expr(llvm, &fn_ast.arg_expr)?;
+    let thunk = llvm::call_call_thunk(llvm, fn_thunk, arg_thunk)?;
+    let f = HasRefCell::<FnSem>::get_rc(fn_ast);
+    if f.rank() == f.arity {
+        let null = llvm.const_null()?;
+        llvm::call_call_thunk(llvm, thunk, null)
+    }
+    else {
+        Ok(thunk)
+    }
+}
+
+fn gen_ident(llvm: &mut LLVM, ident_ast: &IdentAst) -> Result<LLVMValueRef> {
+    let f = HasRefCell::<FnSem>::get_rc(ident_ast);
+    let name = &f.logical_name();
+    let name_without_rank = &f.to_key().without_rank().logical_name();
+    if let Ok(num) = name_without_rank.parse::<i64>() {
+        let value = llvm.const_i64(num)?;
+        llvm::call_new_val_thunk(llvm, value)
+    }
+    else if let Ok(value) = llvm.get_named_value(name) {
+        Ok(value)
+    }
+    else if let Ok(value) = llvm.get_named_function(name) {
+        let arity = f.ty.arity();
+        let arity_value = llvm.const_i64(arity as i64)?;
+        let thunk = llvm::call_new_fn_thunk(llvm, value, arity_value)?;
+        if arity == 0 {
+            let null = llvm.const_null()?;
+            llvm::call_call_thunk(llvm, thunk, null)
+        }
+        else {
+            Ok(thunk)
         }
     }
     else {
-        Ok(None)
-    }
-}
-
-fn gen_fn(llvm: &mut LLVM, fn_ast: &FnAst) -> Result<Option<LLVMValueRef>> {
-    gen_expr(llvm, &fn_ast.fn_expr)
-}
-
-fn gen_ident(_llvm: &mut LLVM, _ident_ast: &IdentAst) -> Result<Option<LLVMValueRef>> {
-    Ok(None)
-}
-
-fn gen_llvm_block(llvm: &mut LLVM, fn_value: LLVMValueRef, body: impl FnOnce(&mut LLVM) -> Result<()>) -> Result<()> {
-    let block_count = LLVM::count_basic_blocks(fn_value);
-    if block_count != 0 {
-        bail!("Function cannot be redefined.");
-    }
-    let block = llvm.append_basic_block(fn_value, "entry")?;
-    llvm.position_builder_at_end(block);
-    match body(llvm) {
-        Ok(_) => {
-            if LLVM::verify_function(fn_value) {
-                Ok(())
-            }
-            else {
-                LLVM::delete_function(fn_value);
-                bail!("Invalid function.");
-            }
-        },
-        Err(e) => {
-            LLVM::delete_function(fn_value);
-            Err(e)
-        },
+        bail!("Unknown identifier.");
     }
 }

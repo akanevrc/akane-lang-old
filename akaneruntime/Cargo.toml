@@ -1,0 +1,9 @@
+[package]
+name = "akaneruntime"
+version = "0.1.0"
+edition = "2021"
+authors = ["akanevrc <akanezoranomukou@gmail.com>"]
+description = "Runtime for Akane language"
+build = "build.rs"
+
+[dependencies]

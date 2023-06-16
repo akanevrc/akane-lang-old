@@ -12,7 +12,7 @@ pub struct Ty2Sem {
     pub name: String,
     pub in_ty: Rc<TySem>,
     pub out_ty: Rc<TySem>,
-    pub rank: usize,
+    pub arity: usize,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -51,20 +51,20 @@ impl Sem for Ty2Key {
 
 impl Ty2Sem {
     pub fn new_or_get(ctx: &mut SemContext, qual: Rc<QualSem>, in_ty: Rc<TySem>, out_ty: Rc<TySem>) -> Rc<Self> {
-        let rank = out_ty.rank() + 1;
+        let arity = out_ty.arity() + 1;
         let val = Rc::new(Self {
             id: ctx.ty2_store.next_id(),
             qual,
             name: Self::name(&in_ty, &out_ty),
             in_ty,
             out_ty,
-            rank,
+            arity,
         });
         let key = val.to_key();
         ctx.ty2_store.insert_or_get(key, val)
     }
 
-    pub fn name(in_ty: &Rc<TySem>, out_ty: &Rc<TySem>) -> String {
+    fn name(in_ty: &Rc<TySem>, out_ty: &Rc<TySem>) -> String {
         let in_ty_name = match in_ty.as_ref() {
             TySem::Ty2(ty2) => format!("({})", ty2.name),
             TySem::Ty1(ty1) => ty1.name.clone(),

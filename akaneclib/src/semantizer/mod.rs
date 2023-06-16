@@ -29,18 +29,19 @@ fn visit_fn_def(ctx: &mut SemContext, fn_def_ast: &FnDefAst) -> Result<()> {
             ty_annot.get_rc()
         }
         else {
-            let i32_ty = TySem::get_from_name(ctx, "i32")?;
-            let fn_in_tys = vec![i32_ty.clone(); arg_names.len()];
-            let fn_out_ty = i32_ty.clone();
+            let i64_ty = TySem::get_from_name(ctx, "i64")?;
+            let fn_in_tys = vec![i64_ty.clone(); arg_names.len()];
+            let fn_out_ty = i64_ty.clone();
             TySem::new_or_get_fn_ty(ctx, qual.clone(), fn_in_tys, fn_out_ty)
         };
     let fn_res = FnSem::new(ctx, qual, name.clone(), fn_ty.clone());
     match fn_res {
-        Ok(f) => fn_def_ast.set_rc(f.clone()),
-        Err(_) => bail!("Duplicate function definitions."),
-    }
+        Ok(f) =>
+            fn_def_ast.set_rc(Rc::new(f[0].to_key())),
+        Err(_) =>
+            bail!("Duplicate function definitions."),
+    };
     let qual = ctx.push_scope_into_qual_stack(ScopeSem::Fn(name.clone())).get_val(ctx)?;
-    visit_left_fn_def(ctx, &fn_def_ast.left_fn_def)?;
     let (arg_tys, ret_ty) = fn_ty.to_arg_and_ret_tys();
     if arg_tys.len() != arg_names.len() {
         bail!("Defferent argument count between type annotation and function definition.")
@@ -48,7 +49,7 @@ fn visit_fn_def(ctx: &mut SemContext, fn_def_ast: &FnDefAst) -> Result<()> {
     let args =
         arg_names.iter()
         .zip(arg_tys)
-        .map(|(name, arg_ty)| FnSem::new(ctx, qual.clone(), name.clone(), arg_ty.clone()))
+        .map(|(name, arg_ty)| Ok(FnSem::new(ctx, qual.clone(), name.clone(), arg_ty.clone())?.first().unwrap().clone()))
         .collect::<Result<Vec<_>>>()?;
     fn_def_ast.set_rc(Rc::new(args));
     visit_expr(ctx, &fn_def_ast.expr)?;
@@ -93,10 +94,6 @@ fn visit_ty_ident(ctx: &mut SemContext, ty_ident_ast: &TyIdentAst) -> Result<()>
     Ok(())
 }
 
-fn visit_left_fn_def(_ctx: &mut SemContext, _left_fn_def_ast: &LeftFnDefAst) -> Result<()> {
-    Ok(())
-}
-
 fn visit_expr(ctx: &mut SemContext, expr_ast: &ExprAst) -> Result<()> {
     match &expr_ast.expr_enum {
         ExprEnum::Fn(fn_ast) =>
@@ -105,51 +102,52 @@ fn visit_expr(ctx: &mut SemContext, expr_ast: &ExprAst) -> Result<()> {
             visit_ident(ctx, ident_ast)?,
     }
     HasRefCell::<TySem>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
-    HasRefCell::<Thunk>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
+    HasRefCell::<FnSem>::set_rc(expr_ast, expr_ast.expr_enum.get_rc());
     Ok(())
 }
 
 fn visit_fn(ctx: &mut SemContext, fn_ast: &FnAst) -> Result<()> {
     visit_expr(ctx, &fn_ast.fn_expr)?;
     visit_expr(ctx, &fn_ast.arg_expr)?;
-    let (ty, thunk) = match &fn_ast.fn_expr.expr_enum {
+    let (ty, f) = match &fn_ast.fn_expr.expr_enum {
         ExprEnum::Fn(prev_fn_ast) => {
             let prev_ty = HasRefCell::<TySem>::get_rc(prev_fn_ast);
-            let ty = prev_ty.to_applied()?;
-            let prev_thunk = HasRefCell::<Thunk>::get_rc(prev_fn_ast);
-            let mut args = prev_thunk.args.clone();
-            args.push(fn_ast.arg_expr.clone());
-            let thunk = Thunk::new(prev_thunk.fn_sem.clone(), args);
-            (ty, thunk)
+            let ty = prev_ty.to_out_ty()?;
+            let prev_f = HasRefCell::<FnSem>::get_rc(prev_fn_ast);
+            let next_f = ctx.next_fn_store.get(&prev_f.to_key())?.clone();
+            (ty, next_f)
         },
         ExprEnum::Ident(ident_ast) => {
             let prev_ty = HasRefCell::<TySem>::get_rc(ident_ast);
-            let ty = prev_ty.to_applied()?;
-            let prev_thunk = HasRefCell::<Thunk>::get_rc(ident_ast);
-            let thunk = Thunk::new(prev_thunk.fn_sem.clone(), vec![fn_ast.arg_expr.clone()]);
-            (ty, thunk)
+            let ty = prev_ty.to_out_ty()?;
+            let prev_f = HasRefCell::<FnSem>::get_rc(ident_ast);
+            let next_f = ctx.next_fn_store.get(&prev_f.to_key())?.clone();
+            (ty, next_f)
         },
     };
     fn_ast.set_rc(ty);
-    fn_ast.set_rc(thunk);
+    fn_ast.set_rc(f);
     Ok(())
 }
 
 fn visit_ident(ctx: &mut SemContext, ident_ast: &IdentAst) -> Result<()> {
-    let f_opt = ctx.find_with_qual(
-        |ctx, qual| FnSem::get(ctx, qual.to_key(), ident_ast.name.clone()).ok()
-    );
+    if is_num(&ident_ast.name) {
+        let top = QualSem::top(ctx);
+        let i64_ty = TySem::get_from_name(ctx, "i64")?;
+        ident_ast.set_rc(i64_ty.clone());
+        let f = FnSem::new_or_get(ctx, top, ident_ast.name.clone(), i64_ty);
+        ident_ast.set_rc(f.last().unwrap().clone());
+        return Ok(())
+    }
+    let f_opt =
+        ctx.find_with_qual(|ctx, qual| {
+            let key = FnKey::new(qual.to_key(), ident_ast.name.clone());
+            ctx.ranked_fn_store.get(&key).ok()
+            .map(|fs| fs.first().unwrap().clone())
+        });
     if let Some(f) = f_opt {
         ident_ast.set_rc(f.ty.clone());
-        ident_ast.set_rc(Thunk::new(f, Vec::new()));
-        Ok(())
-    }
-    else if is_num(&ident_ast.name) {
-        let top = QualSem::top(ctx);
-        let i32_ty = TySem::get_from_name(ctx, "i32")?;
-        let f = FnSem::new_or_get(ctx, top, ident_ast.name.clone(), i32_ty.clone());
-        ident_ast.set_rc(i32_ty);
-        ident_ast.set_rc(Thunk::new(f, Vec::new()));
+        ident_ast.set_rc(f);
         Ok(())
     }
     else {

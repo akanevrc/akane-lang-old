@@ -30,17 +30,12 @@ impl_sem_key!(TyKey, TySem, ty_store);
 
 impl PartialEq for TySem {
     fn eq(&self, other: &Self) -> bool {
-        match self {
-            Self::Ty2(ty2) =>
-                match other {
-                    Self::Ty2(other_ty2) => ty2.id == other_ty2.id,
-                    Self::Ty1(_) => false,
-                },
-            Self::Ty1(ty1) =>
-                match other {
-                    Self::Ty2(_) => false,
-                    Self::Ty1(other_ty1) => ty1.id == other_ty1.id,
-                },
+        match (self, other) {
+            (Self::Ty2(ty2), Self::Ty2(other_ty2)) =>
+                ty2.id == other_ty2.id,
+            (Self::Ty1(ty1), Self::Ty1(other_ty1)) =>
+                ty1.id == other_ty1.id,
+            _ => false,
         }
     }
 }
@@ -50,8 +45,10 @@ impl Eq for TySem {}
 impl Hash for TySem {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Self::Ty2(ty2) => (ty2.id as i128).hash(state),
-            Self::Ty1(ty1) => (-(ty1.id as i128)).hash(state),
+            Self::Ty2(ty2) =>
+                (-(ty2.id as i128)).hash(state),
+            Self::Ty1(ty1) =>
+                (ty1.id as i128).hash(state),
         };
     }
 }
@@ -69,8 +66,10 @@ impl Sem for TySem {
 impl SemVal<TyKey> for TySem {
     fn to_key(&self) -> TyKey {
         match self {
-            Self::Ty2(ty2) => TyKey { qual: ty2.qual.to_key(), name: ty2.name.clone() },
-            Self::Ty1(ty1) => TyKey { qual: ty1.qual.to_key(), name: ty1.name.clone() },
+            Self::Ty2(ty2) =>
+                TyKey::new(ty2.qual.to_key(), ty2.name.clone()),
+            Self::Ty1(ty1) =>
+                TyKey::new(ty1.qual.to_key(), ty1.name.clone()),
         }
     }
 }
@@ -94,14 +93,14 @@ impl Sem for TyKey {
 }
 
 impl TySem {
-    pub fn new_or_get_ty1(ctx: &mut SemContext, qual: Rc<QualSem>, name: String) -> Rc<Self> {
-        let val = Rc::new(Self::Ty1(Ty1Sem::new_or_get(ctx, qual, name)));
+    pub fn new_or_get_ty2(ctx: &mut SemContext, qual: Rc<QualSem>, in_ty: Rc<TySem>, out_ty: Rc<TySem>) -> Rc<Self> {
+        let val = Rc::new(Self::Ty2(Ty2Sem::new_or_get(ctx, qual, in_ty, out_ty)));
         let key = val.to_key();
         ctx.ty_store.insert_or_get(key, val)
     }
 
-    pub fn new_or_get_ty2(ctx: &mut SemContext, qual: Rc<QualSem>, in_ty: Rc<TySem>, out_ty: Rc<TySem>) -> Rc<Self> {
-        let val = Rc::new(Self::Ty2(Ty2Sem::new_or_get(ctx, qual, in_ty, out_ty)));
+    pub fn new_or_get_ty1(ctx: &mut SemContext, qual: Rc<QualSem>, name: String) -> Rc<Self> {
+        let val = Rc::new(Self::Ty1(Ty1Sem::new_or_get(ctx, qual, name)));
         let key = val.to_key();
         ctx.ty_store.insert_or_get(key, val)
     }
@@ -128,26 +127,26 @@ impl TySem {
         let mut ty = self;
         loop {
             match ty.as_ref() {
-                TySem::Ty2(ty2) => {
+                Self::Ty2(ty2) => {
                     tys.push(ty2.in_ty.clone());
                     ty = ty2.out_ty.clone();
                 },
-                TySem::Ty1(_) => return (tys, ty.clone()),
+                Self::Ty1(_) => return (tys, ty.clone()),
             }
         }
     }
 
-    pub fn to_applied(&self) -> Result<Rc<Self>> {
+    pub fn to_out_ty(&self) -> Result<Rc<Self>> {
         match self {
-            TySem::Ty2(ty2) => Ok(ty2.out_ty.clone()),
-            TySem::Ty1(_) => bail!("Cannot apply a argument."),
+            Self::Ty2(ty2) => Ok(ty2.out_ty.clone()),
+            Self::Ty1(_) => bail!("Cannot get a out_ty."),
         }
     }
 
-    pub fn rank(&self) -> usize {
+    pub fn arity(&self) -> usize {
         match self {
-            TySem::Ty2(ty2) => ty2.rank,
-            TySem::Ty1(_) => 0,
+            Self::Ty2(ty2) => ty2.arity,
+            Self::Ty1(_) => 0,
         }
     }
 }

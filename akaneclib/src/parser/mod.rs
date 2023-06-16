@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::iter::Peekable;
+use std::{
+    iter::Peekable,
+    rc::Rc,
+};
 use anyhow::{
     bail,
     Result,
@@ -73,7 +76,7 @@ fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     }
 }
 
-fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
     let mut exprs = Vec::new();
     if let Some(lhs) = assume_ty_lhs(tokens)? {
         exprs.push(lhs);
@@ -92,7 +95,7 @@ fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
     }
 }
 
-fn assume_ty_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+fn assume_ty_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
     if let Some(term) = assume_ty_term(tokens)? {
         Ok(Some(term))
     }
@@ -101,7 +104,7 @@ fn assume_ty_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     }
 }
 
-fn assume_ty_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+fn assume_ty_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
     if let Some(Token::Arrow) = tokens.peek() {
         tokens.next();
         if let Some(term) = assume_ty_term(tokens)? {
@@ -114,7 +117,7 @@ fn assume_ty_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     }
 }
 
-fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
+fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
     if let Some(factor) = assume_ty_factor(tokens)? {
         Ok(Some(factor))
     }
@@ -123,9 +126,29 @@ fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
     }
 }
 
-fn assume_ty_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyExprAst>> {
-    if let Some(ident) = assume_ty_ident(tokens)? {
+fn assume_ty_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
+    if let Some(expr) = assume_ty_paren(tokens)? {
+        Ok(Some(expr))
+    }
+    else if let Some(ident) = assume_ty_ident(tokens)? {
         Ok(Some(ty_ident_expr_ast(ident)))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_ty_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>>  {
+    if let Some(Token::LParen) = tokens.peek() {
+        tokens.next();
+        if let Some(expr) = assume_ty_expr(tokens)? {
+            if let Some(Token::RParen) = tokens.peek() {
+                tokens.next();
+                return Ok(Some(expr))
+            }
+            bail!("`)` required.")
+        }
+        bail!("Expression required.")
     }
     else {
         Ok(None)
@@ -159,11 +182,12 @@ fn assume_left_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Res
     }
 }
 
-fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
+fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(lhs) = assume_prefix_op_lhs(tokens)? {
         let mut lhs = lhs;
         while let Some((op_code, rhs)) = assume_infix_op_rhs(tokens)? {
-            lhs = fn_expr_ast(infix_op_ast(op_code, lhs, rhs));
+            let name = infix_op_name(&op_code)?;
+            lhs = fn_expr_ast(infix_op_ast(name, lhs, rhs));
         }
         Ok(Some(lhs))
     }
@@ -172,7 +196,7 @@ fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     }
 }
 
-fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
+fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(factor) = assume_factor(tokens)? {
         let mut term = factor;
         while let Some(f) = assume_factor(tokens)? {
@@ -185,13 +209,14 @@ fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     }
 }
 
-fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
+fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(Token::OpCode(op_code)) = tokens.peek() {
-        let op_code = format!("'{}", op_code);
-        if op_code == "'-" {
+        let op_code = op_code.to_owned();
+        if op_code == "-" {
             tokens.next();
             if let Some(term) = assume_term(tokens)? {
-                return Ok(Some(fn_expr_ast(prefix_op_ast(op_code, term))));
+                let name = prefix_op_name(&op_code)?;
+                return Ok(Some(fn_expr_ast(prefix_op_ast(name, term))));
             }
             bail!("Term required.");
         }
@@ -205,7 +230,7 @@ fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> R
     }
 }
 
-fn assume_infix_op_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<(String, ExprAst)>> {
+fn assume_infix_op_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<(String, Rc<ExprAst>)>> {
     if let Some(Token::OpCode(op_code)) = tokens.peek() {
         let op_code = op_code.to_owned();
         tokens.next();
@@ -219,7 +244,7 @@ fn assume_infix_op_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Re
     }
 }
 
-fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>> {
+fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(expr) = assume_paren(tokens)? {
         Ok(Some(expr))
     }
@@ -234,7 +259,7 @@ fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     }
 }
 
-fn assume_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<ExprAst>>  {
+fn assume_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>>  {
     if let Some(Token::LParen) = tokens.peek() {
         tokens.next();
         if let Some(expr) = assume_expr(tokens)? {
@@ -285,5 +310,23 @@ fn assume_simple_token(tokens: &mut Peekable<impl Iterator<Item = Token>>, assum
     }
     else {
         Ok(None)
+    }
+}
+
+fn prefix_op_name(op_code: &str) -> Result<String> {
+    if op_code == "-" {
+        Ok("negate".to_owned())
+    }
+    else {
+        bail!("Invalid prefix operator.");
+    }
+}
+
+fn infix_op_name(op_code: &str) -> Result<String> {
+    if op_code == "+" {
+        Ok("add".to_owned())
+    }
+    else {
+        bail!("Invalid infix operator.");
     }
 }

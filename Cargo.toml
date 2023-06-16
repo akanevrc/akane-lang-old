@@ -2,5 +2,6 @@
 members = [
     "akanec",
     "akaneclib",
+    "akaneruntime",
     "akanectest",
 ]

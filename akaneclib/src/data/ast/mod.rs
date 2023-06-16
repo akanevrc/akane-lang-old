@@ -17,10 +17,10 @@ pub enum TopDefEnum {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FnDefAst {
-    pub ty_annot: Option<TyExprAst>,
+    pub ty_annot: Option<Rc<TyExprAst>>,
     pub left_fn_def: LeftFnDefAst,
-    pub expr: ExprAst,
-    pub fn_sem: RefCell<Option<Rc<FnSem>>>,
+    pub expr: Rc<ExprAst>,
+    pub fn_key: RefCell<Option<Rc<FnKey>>>,
     pub arg_sems: RefCell<Option<Rc<Vec<Rc<FnSem>>>>>,
 }
 
@@ -59,7 +59,7 @@ pub struct LeftFnDefAst {
 pub struct ExprAst {
     pub expr_enum: ExprEnum,
     pub ty_sem: RefCell<Option<Rc<TySem>>>,
-    pub thunk: RefCell<Option<Rc<Thunk>>>,
+    pub fn_sem: RefCell<Option<Rc<FnSem>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -73,12 +73,12 @@ pub struct FnAst {
     pub fn_expr: Rc<ExprAst>,
     pub arg_expr: Rc<ExprAst>,
     pub ty_sem: RefCell<Option<Rc<TySem>>>,
-    pub thunk: RefCell<Option<Rc<Thunk>>>,
+    pub fn_sem: RefCell<Option<Rc<FnSem>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentAst {
     pub name: String,
     pub ty_sem: RefCell<Option<Rc<TySem>>>,
-    pub thunk: RefCell<Option<Rc<Thunk>>>,
+    pub fn_sem: RefCell<Option<Rc<FnSem>>>,
 }

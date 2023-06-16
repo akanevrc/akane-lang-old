@@ -1,17 +1,23 @@
-ty i32
+ty i64
 fn one = 1;
 
-ty i32 -> i32
+ty i64 -> i64
 fn add_one a = a + 1;
 
-ty i32 -> i32 -> i32
-fn add a b = a + b;
+ty i64 -> i64 -> i64
+fn add_nums a b = a + b;
 
-ty i32 -> i32 -> i32
-fn eval_add a b = add a b;
+ty i64 -> i64 -> i64
+fn double_add_nums a b = add_nums (add_nums a b) (add_nums a b);
 
-ty i32 -> i32 -> i32
-fn double a b = add (add a b) (add a b);
+ty i64 -> i64 -> i64
+fn add_nums_paren a b = (add_nums a) b;
 
-ty i32 -> i32 -> i32
-fn add_paren a b = (add a) b;
+ty (i64 -> i64) -> i64 -> i64
+fn eval_fn_1 f a = f a;
+
+ty i64 -> i64
+fn eval_add_one a = eval_fn_1 add_one a;
+
+ty i64 -> i64 -> i64
+fn eval_add_nums a b = eval_fn_1 (add_nums a) b;

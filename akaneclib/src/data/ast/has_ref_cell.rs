@@ -26,17 +26,17 @@ macro_rules! impl_has_ref_cell {
     };
 }
 
-impl_has_ref_cell!(FnDefAst, fn_sem, FnSem);
+impl_has_ref_cell!(FnDefAst, fn_key, FnKey);
 impl_has_ref_cell!(FnDefAst, arg_sems, Vec<Rc<FnSem>>);
 impl_has_ref_cell!(TyExprAst, ty_sem, TySem);
 impl_has_ref_cell!(TyArrowAst, ty_sem, TySem);
 impl_has_ref_cell!(TyIdentAst, ty_sem, TySem);
 impl_has_ref_cell!(ExprAst, ty_sem, TySem);
-impl_has_ref_cell!(ExprAst, thunk, Thunk);
+impl_has_ref_cell!(ExprAst, fn_sem, FnSem);
 impl_has_ref_cell!(FnAst, ty_sem, TySem);
-impl_has_ref_cell!(FnAst, thunk, Thunk);
+impl_has_ref_cell!(FnAst, fn_sem, FnSem);
 impl_has_ref_cell!(IdentAst, ty_sem, TySem);
-impl_has_ref_cell!(IdentAst, thunk, Thunk);
+impl_has_ref_cell!(IdentAst, fn_sem, FnSem);
 
 impl HasRefCell<TySem> for TyExprEnum {
     fn ref_cell(&self) -> &RefCell<Option<Rc<TySem>>> {
@@ -56,8 +56,8 @@ impl HasRefCell<TySem> for ExprEnum {
     }
 }
 
-impl HasRefCell<Thunk> for ExprEnum {
-    fn ref_cell(&self) -> &RefCell<Option<Rc<Thunk>>> {
+impl HasRefCell<FnSem> for ExprEnum {
+    fn ref_cell(&self) -> &RefCell<Option<Rc<FnSem>>> {
         match self {
             Self::Fn(f) => f.ref_cell(),
             Self::Ident(ident) => ident.ref_cell(),

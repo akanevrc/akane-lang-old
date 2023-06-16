@@ -9,7 +9,7 @@ use anyhow::{
 };
 use crate::data::*;
 
-pub struct Store<Key, Val>
+pub struct IdStore<Key, Val>
 where
     Key: Clone + Eq + Hash + Sem,
 {
@@ -17,7 +17,7 @@ where
     vals: Vec<Rc<Val>>,
 }
 
-impl<Key, Val> Store<Key, Val>
+impl<Key, Val> IdStore<Key, Val>
 where
     Key: Clone + Eq + Hash + Sem,
 {

@@ -11,46 +11,10 @@ use anyhow::{
     Result,
 };
 use llvm_sys::{
-    LLVMBasicBlock,
-    LLVMType,
-    LLVMValue,
-    analysis::{
-        LLVMVerifierFailureAction,
-        LLVMVerifyFunction,
-    },
-    core::{
-        LLVMAddFunction,
-        LLVMAppendBasicBlock,
-        LLVMBuildAdd,
-        LLVMBuildCall2,
-        LLVMBuildRet,
-        LLVMBuildRetVoid,
-        LLVMConstInt,
-        LLVMContextCreate,
-        LLVMContextDispose,
-        LLVMCountBasicBlocks,
-        LLVMCreateBuilderInContext,
-        LLVMDeleteFunction,
-        LLVMDisposeBuilder,
-        LLVMDisposeMessage,
-        LLVMDisposeModule,
-        LLVMFunctionType,
-        LLVMGetNamedFunction,
-        LLVMGetParam,
-        LLVMInt32TypeInContext,
-        LLVMModuleCreateWithNameInContext,
-        LLVMPositionBuilderAtEnd,
-        LLVMPrintModuleToString,
-        LLVMSetValueName2,
-    },
-    prelude::{
-        LLVMBasicBlockRef,
-        LLVMBuilderRef,
-        LLVMContextRef,
-        LLVMModuleRef,
-        LLVMTypeRef,
-        LLVMValueRef,
-    },
+    *,
+    analysis::*,
+    core::*,
+    prelude::*,
 };
 use pool::*;
 
@@ -156,7 +120,15 @@ impl LLVM {
         }
     }
 
-    pub fn int32_type(&self) -> Result<LLVMTypeRef> {
+    pub fn void_type() -> Result<LLVMTypeRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMVoidType()
+            )
+        }
+    }
+
+    pub fn i32_type(&self) -> Result<LLVMTypeRef> {
         unsafe {
             Self::ptr_to_result(
                 LLVMInt32TypeInContext(self.context)
@@ -164,7 +136,15 @@ impl LLVM {
         }
     }
 
-    pub fn function_type(&mut self, ret_ty: LLVMTypeRef, arg_tys: Vec<LLVMTypeRef>) -> Result<LLVMTypeRef> {
+    pub fn i64_type(&self) -> Result<LLVMTypeRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMInt64TypeInContext(self.context)
+            )
+        }
+    }
+
+    pub fn function_type(&mut self, ret_ty: LLVMTypeRef, arg_tys: &[LLVMTypeRef]) -> Result<LLVMTypeRef> {
         unsafe {
             let arg_count = arg_tys.len() as u32;
             let arg_ty_vec = self.type_slice_pool.slice(&arg_tys);
@@ -174,11 +154,79 @@ impl LLVM {
         }
     }
 
-    pub fn const_int(&self, value: u64, sign_extend: i32) -> Result<LLVMValueRef> {
+    pub fn pointer_type(&mut self) -> Result<LLVMTypeRef> {
         unsafe {
-            let ty = LLVMInt32TypeInContext(self.context);
             Self::ptr_to_result(
-                LLVMConstInt(ty, value, sign_extend)
+                LLVMPointerTypeInContext(self.context, 0)
+            )
+        }
+    }
+
+    pub fn type_of(value: LLVMValueRef) -> Result<LLVMTypeRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMTypeOf(value)
+            )
+        }
+    }
+
+    pub fn array_type(ty: LLVMTypeRef, len: usize) -> Result<LLVMTypeRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMArrayType(ty, len as u32)
+            )
+        }
+    }
+
+    pub fn struct_type(&mut self, tys: &[LLVMTypeRef]) -> Result<LLVMTypeRef> {
+        unsafe {
+            let ty_count = tys.len() as u32;
+            let ty_vec = self.type_slice_pool.slice(&tys);
+            Self::ptr_to_result(
+                LLVMStructTypeInContext(self.context, ty_vec, ty_count, 1)
+            )
+        }
+    }
+
+    pub fn thunk_type(&mut self) -> Result<LLVMTypeRef> {
+        let ptr_ty = self.pointer_type()?;
+        let i64_ty = self.i64_type()?;
+        self.struct_type(&[ptr_ty, i64_ty, i64_ty, ptr_ty])
+    }
+
+    pub fn const_i32(&self, value: i32) -> Result<LLVMValueRef> {
+        unsafe {
+            let ty = self.i32_type()?;
+            Self::ptr_to_result(
+                LLVMConstInt(ty, value as u64, 0)
+            )
+        }
+    }
+
+    pub fn const_i64(&self, value: i64) -> Result<LLVMValueRef> {
+        unsafe {
+            let ty = self.i64_type()?;
+            Self::ptr_to_result(
+                LLVMConstInt(ty, value as u64, 0)
+            )
+        }
+    }
+
+    pub fn const_null(&mut self) -> Result<LLVMValueRef> {
+        unsafe {
+            let ty = self.pointer_type()?;
+            Self::ptr_to_result(
+                LLVMConstNull(ty)
+            )
+        }
+    }
+
+    pub fn const_ptr(&mut self, value: i64) -> Result<LLVMValueRef> {
+        unsafe {
+            let value = self.const_i64(value)?;
+            let ty = self.pointer_type()?;
+            Self::ptr_to_result(
+                LLVMConstIntToPtr(value, ty)
             )
         }
     }
@@ -186,6 +234,14 @@ impl LLVM {
     pub fn set_value_name(&mut self, value: LLVMValueRef, name: &str) {
         unsafe {
             LLVMSetValueName2(value, self.c_str_pool.c_str(name), name.len())
+        }
+    }
+
+    pub fn add_global(&mut self, ty: LLVMTypeRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMAddGlobal(self.module, ty, self.c_str_pool.c_str(name))
+            )
         }
     }
 
@@ -239,13 +295,29 @@ impl LLVM {
         }
     }
 
-    pub fn build_call(&mut self, fn_ty: LLVMTypeRef, fn_value: LLVMValueRef, args: Vec<LLVMValueRef>, name: &str) -> Result<LLVMValueRef> {
+    pub fn build_call(&mut self, fn_ty: LLVMTypeRef, fn_value: LLVMValueRef, args: &[LLVMValueRef], name: &str) -> Result<LLVMValueRef> {
         unsafe {
             let arg_count = args.len() as u32;
             let arg_vec = self.value_slice_pool.slice(&args);
             let name = self.c_str_pool.c_str(name);
             Self::ptr_to_result(
                 LLVMBuildCall2(self.builder, fn_ty, fn_value, arg_vec, arg_count, name)
+            )
+        }
+    }
+
+    pub fn build_ptr_to_int(&mut self, ptr_value: LLVMValueRef, ty: LLVMTypeRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildPtrToInt(self.builder, ptr_value, ty, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_neg(&mut self, rhs: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildNeg(self.builder, rhs, self.c_str_pool.c_str(name))
             )
         }
     }
@@ -271,6 +343,88 @@ impl LLVM {
             Self::ptr_to_result(
                 LLVMBuildRet(self.builder, ret_value)
             )
+        }
+    }
+
+    pub fn build_alloca(&mut self, ty: LLVMTypeRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildAlloca(self.builder, ty, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_array_alloca(&mut self, ty: LLVMTypeRef, len: usize, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            let len_value = self.const_i64(len as i64)?;
+            Self::ptr_to_result(
+                LLVMBuildArrayAlloca(self.builder, ty, len_value, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_load(&mut self, ty: LLVMTypeRef, ptr_value: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildLoad2(self.builder, ty, ptr_value, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_store(&mut self, value: LLVMValueRef, ptr_value: LLVMValueRef) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildStore(self.builder, value, ptr_value)
+            )
+        }
+    }
+
+    pub fn build_array_gep(&mut self, ty: LLVMTypeRef, ptr_value: LLVMValueRef, index: usize, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            let zero_value = self.const_i64(0)?;
+            let index_value = self.const_i64(index as i64)?;
+            let indices = [zero_value, index_value];
+            let indices_vec = self.value_slice_pool.slice(&indices);
+            let name = self.c_str_pool.c_str(name);
+            Self::ptr_to_result(
+                LLVMBuildGEP2(self.builder, ty, ptr_value, indices_vec, 2, name)
+            )
+        }
+    }
+
+    pub fn build_struct_gep(&mut self, ty: LLVMTypeRef, ptr_value: LLVMValueRef, index: usize, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            let zero_value = self.const_i64(0)?;
+            let elem_value = self.const_i32(index as i32)?;
+            let indices = [zero_value, elem_value];
+            let indices_vec = self.value_slice_pool.slice(&indices);
+            let name = self.c_str_pool.c_str(name);
+            Self::ptr_to_result(
+                LLVMBuildGEP2(self.builder, ty, ptr_value, indices_vec, 2, name)
+            )
+        }
+    }
+
+    pub fn build_thunk_arg_gep(&mut self, ptr_value: LLVMValueRef, index: usize, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            let ty = self.thunk_type()?;
+            let zero_value = self.const_i64(0)?;
+            let elem_value = self.const_i32(3 as i32)?;
+            let indices = [zero_value, elem_value];
+            let indices_vec = self.value_slice_pool.slice(&indices);
+            let name = self.c_str_pool.c_str(name);
+            let gep = Self::ptr_to_result(
+                LLVMBuildGEP2(self.builder, ty, ptr_value, indices_vec, 2, name)
+            )?;
+            let ptr_ty = self.pointer_type()?;
+            let arg_value = self.build_load(ptr_ty, gep, "load")?;
+            let index_value = self.const_i64(index as i64)?;
+            let indices = [index_value];
+            let indices_vec = self.value_slice_pool.slice(&indices);
+            let gep = Self::ptr_to_result(
+                LLVMBuildGEP2(self.builder, ptr_ty, arg_value, indices_vec, 1, name)
+            )?;
+            self.build_load(ptr_ty, gep, "load")
         }
     }
 

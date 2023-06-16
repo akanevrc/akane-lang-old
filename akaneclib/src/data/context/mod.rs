@@ -1,35 +1,43 @@
 mod qual_stack;
-mod store;
+mod id_store;
+mod generic_store;
 
 pub use qual_stack::*;
-pub use store::*;
+pub use id_store::*;
+pub use generic_store::*;
 
 use std::rc::Rc;
 use crate::data::*;
 
 pub struct SemContext {
     pub qual_stack: QualStack,
-    pub qual_store: Store<QualKey, QualSem>,
-    pub ty_store: Store<TyKey, TySem>,
-    pub ty2_store: Store<Ty2Key, Ty2Sem>,
-    pub ty1_store: Store<Ty1Key, Ty1Sem>,
-    pub fn_store: Store<FnKey, FnSem>,
+    pub qual_store: IdStore<QualKey, QualSem>,
+    pub ty_store: IdStore<TyKey, TySem>,
+    pub ty2_store: IdStore<Ty2Key, Ty2Sem>,
+    pub ty1_store: IdStore<Ty1Key, Ty1Sem>,
+    pub fn_store: IdStore<FnKey, FnSem>,
+    pub ranked_fn_store: GenericStore<FnKey, Vec<Rc<FnSem>>>,
+    pub next_fn_store: GenericStore<FnKey, Rc<FnSem>>,
 }
 
 impl SemContext {
     pub fn new() -> Self {
         let mut ctx = Self {
             qual_stack: QualStack::new(),
-            qual_store: Store::<QualKey, QualSem>::new(),
-            ty_store: Store::<TyKey, TySem>::new(),
-            ty2_store: Store::<Ty2Key, Ty2Sem>::new(),
-            ty1_store: Store::<Ty1Key, Ty1Sem>::new(),
-            fn_store: Store::<FnKey, FnSem>::new(),
+            qual_store: IdStore::new(),
+            ty_store: IdStore::new(),
+            ty2_store: IdStore::new(),
+            ty1_store: IdStore::new(),
+            fn_store: IdStore::new(),
+            ranked_fn_store: GenericStore::new(),
+            next_fn_store: GenericStore::new(),
         };
         let top = QualSem::top(&mut ctx);
-        let i32_ty = TySem::new_or_get_ty1(&mut ctx, top.clone(), "i32".to_owned());
-        let i32_bin_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i32_ty.clone(), i32_ty.clone()], i32_ty);
-        FnSem::new_or_get(&mut ctx, top, "+".to_owned(), i32_bin_op_ty);
+        let i64_ty = TySem::new_or_get_ty1(&mut ctx, top.clone(), "i64".to_owned());
+        let i64_uni_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i64_ty.clone()], i64_ty.clone());
+        FnSem::new_or_get(&mut ctx, top.clone(), "negate".to_owned(), i64_uni_op_ty);
+        let i64_bin_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i64_ty.clone(), i64_ty.clone()], i64_ty);
+        FnSem::new_or_get(&mut ctx, top, "add".to_owned(), i64_bin_op_ty);
         ctx
     }
 
