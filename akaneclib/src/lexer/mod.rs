@@ -8,23 +8,22 @@ use anyhow::{
 };
 use crate::data::*;
 
-pub fn lex(input: String) -> Result<Vec<Token>> {
+pub fn lex(input: &str) -> Result<Vec<TokenInfo>> {
     let mut tokens = Vec::new();
-    let mut chars = input.chars().peekable();
+    let mut str_iter = StrInfoIter::new(input).peekable();
     loop {
-        if let Some(token) = assume_eof(&mut chars)? {
-            if let Some(last) = tokens.last() {
+        if let Some(_) = assume_eof(&mut str_iter)? {
+            if let Some(TokenInfo(last, info)) = tokens.last() {
                 if *last != semicolon() {
-                    tokens.push(semicolon());
+                    tokens.push(TokenInfo::new(semicolon(), info.clone()));
                 }
             }
-            tokens.push(token);
             return Ok(tokens);
         }
-        if let Some(_) = assume_whitespace(&mut chars)? {
+        if let Some(_) = assume_whitespace(&mut str_iter)? {
             continue;
         }
-        if let Some(token) = assume_token(&mut chars)? {
+        if let Some(token) = assume_token(&mut str_iter)? {
             tokens.push(token);
             continue;
         }
@@ -32,19 +31,19 @@ pub fn lex(input: String) -> Result<Vec<Token>> {
     }
 }
 
-fn assume_eof(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if chars.peek().is_none() {
-        Ok(Some(eof()))
+fn assume_eof<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<()>> {
+    if str_iter.peek().is_none() {
+        Ok(Some(()))
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<()>> {
+fn assume_whitespace<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<()>> {
     let mut consumed = false;
-    while is_whitespace(chars.peek()) {
-        chars.next();
+    while is_whitespace(str_iter.peek()) {
+        str_iter.next();
         consumed = true;
     }
     if consumed {
@@ -55,20 +54,20 @@ fn assume_whitespace(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result
     }
 }
 
-fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if let Some(token) = assume_semicolon(chars)? {
+fn assume_token<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+    if let Some(token) = assume_semicolon(str_iter)? {
         Ok(Some(token))
     }
-    else if let Some(token) = assume_keyword_or_ident(chars)? {
+    else if let Some(token) = assume_keyword_or_ident(str_iter)? {
         Ok(Some(token))
     }
-    else if let Some(token) = assume_num(chars)? {
+    else if let Some(token) = assume_num(str_iter)? {
         Ok(Some(token))
     }
-    else if let Some(token) = assume_paren(chars)? {
+    else if let Some(token) = assume_paren(str_iter)? {
         Ok(Some(token))
     }
-    else if let Some(token) = assume_symbol_or_op_code(chars)? {
+    else if let Some(token) = assume_symbol_or_op_code(str_iter)? {
         Ok(Some(token))
     }
     else {
@@ -76,30 +75,32 @@ fn assume_token(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Opti
     }
 }
 
-fn assume_semicolon(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if is_semicolon(chars.peek()) {
-        chars.next();
-        Ok(Some(semicolon()))
+fn assume_semicolon<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+    if is_semicolon(str_iter.peek()) {
+        let (info, _) = str_iter.next().unwrap();
+        Ok(Some(TokenInfo::new(semicolon(), info)))
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if is_ident_head(chars.peek()) {
-        let mut token = String::from(chars.next().unwrap());
-        while is_ident_tail(chars.peek()) {
-            token.push(chars.next().unwrap());
+fn assume_keyword_or_ident<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+    if is_ident_head(str_iter.peek()) {
+        let (info, c) = str_iter.next().unwrap();
+        let mut token = String::from(c);
+        while is_ident_tail(str_iter.peek()) {
+            let (_, c) = str_iter.next().unwrap();
+            token.push(c);
         }
         if is_ty(&token) {
-            Ok(Some(ty_keyword()))
+            Ok(Some(TokenInfo::new(ty_keyword(), info)))
         }
         else if is_fn(&token) {
-            Ok(Some(fn_keyword()))
+            Ok(Some(TokenInfo::new(fn_keyword(), info)))
         }
         else {
-            Ok(Some(ident(token)))
+            Ok(Some(TokenInfo::new(ident(token), info)))
         }
     }
     else {
@@ -107,48 +108,52 @@ fn assume_keyword_or_ident(chars: &mut Peekable<impl Iterator<Item = char>>) -> 
     }
 }
 
-fn assume_num(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if is_num(chars.peek()) {
-        let mut token = String::from(chars.next().unwrap());
-        while is_num(chars.peek()) {
-            token.push(chars.next().unwrap());
+fn assume_num<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+    if is_num(str_iter.peek()) {
+        let (info, c) = str_iter.next().unwrap();
+        let mut token = String::from(c);
+        while is_num(str_iter.peek()) {
+            let (_, c) = str_iter.next().unwrap();
+            token.push(c);
         }
-        Ok(Some(num(token)))
+        Ok(Some(TokenInfo::new(num(token), info)))
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_paren(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    let c = chars.peek();
-    if is_l_paren(c) {
-        chars.next();
-        Ok(Some(l_paren()))
+fn assume_paren<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+    let s = str_iter.peek();
+    if is_l_paren(s) {
+        let (info, _) = str_iter.next().unwrap();
+        Ok(Some(TokenInfo::new(l_paren(), info)))
     }
-    else if is_r_paren(c) {
-        chars.next();
-        Ok(Some(r_paren()))
+    else if is_r_paren(s) {
+        let (info, _) = str_iter.next().unwrap();
+        Ok(Some(TokenInfo::new(r_paren(), info)))
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) -> Result<Option<Token>> {
-    if is_op_code(chars.peek()) {
-        let mut token = String::from(chars.next().unwrap());
-        while is_op_code(chars.peek()) {
-            token.push(chars.next().unwrap());
+fn assume_symbol_or_op_code<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+    if is_op_code(str_iter.peek()) {
+        let (info, c) = str_iter.next().unwrap();
+        let mut token = String::from(c);
+        while is_op_code(str_iter.peek()) {
+            let (_, c) = str_iter.next().unwrap();
+            token.push(c);
         }
         if is_arrow(&token) {
-            Ok(Some(arrow()))
+            Ok(Some(TokenInfo::new(arrow(), info)))
         }
         else if is_equal(&token) {
-            Ok(Some(equal()))
+            Ok(Some(TokenInfo::new(equal(), info)))
         }
         else {
-            Ok(Some(op_code(token)))
+            Ok(Some(TokenInfo::new(op_code(token), info)))
         }
     }
     else {
@@ -156,28 +161,28 @@ fn assume_symbol_or_op_code(chars: &mut Peekable<impl Iterator<Item = char>>) ->
     }
 }
 
-fn is_whitespace(c: Option<&char>) -> bool {
-    c.map_or(false, |c| c.is_ascii_whitespace())
+fn is_whitespace<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| c.is_ascii_whitespace())
 }
 
-fn is_semicolon(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == ';')
+fn is_semicolon<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| *c == ';')
 }
 
-fn is_ident_head(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == '_' || c.is_ascii_alphabetic())
+fn is_ident_head<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| *c == '_' || c.is_ascii_alphabetic())
 }
 
-fn is_ident_tail(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == '_' || c.is_ascii_alphanumeric())
+fn is_ident_tail<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| *c == '_' || c.is_ascii_alphanumeric())
 }
 
-fn is_num(c: Option<&char>) -> bool {
-    c.map_or(false, |c| c.is_ascii_digit())
+fn is_num<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| c.is_ascii_digit())
 }
 
-fn is_op_code(c: Option<&char>) -> bool {
-    c.map_or(false, |c| [
+fn is_op_code<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| [
         '!',
         '#',
         '$',
@@ -200,12 +205,12 @@ fn is_op_code(c: Option<&char>) -> bool {
     ].contains(c))
 }
 
-fn is_l_paren(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == '(')
+fn is_l_paren<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| *c == '(')
 }
 
-fn is_r_paren(c: Option<&char>) -> bool {
-    c.map_or(false, |c| *c == ')')
+fn is_r_paren<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| *c == ')')
 }
 
 fn is_ty(s: &str) -> bool {

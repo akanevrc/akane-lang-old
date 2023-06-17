@@ -27,12 +27,11 @@ pub fn parse(input: Vec<Token>) -> Result<Vec<TopDefEnum>> {
 }
 
 fn assume_eof(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<()>> {
-    if let Some(Token::Eof) = tokens.peek() {
-        tokens.next();
-        Ok(Some(()))
+    if let Some(_) = tokens.peek() {
+        Ok(None)
     }
     else {
-        Ok(None)
+        Ok(Some(()))
     }
 }
 

@@ -1,9 +1,5 @@
 use crate::data::*;
 
-pub fn eof() -> Token {
-    Token::Eof
-}
-
 pub fn semicolon() -> Token {
     Token::Semicolon
 }
