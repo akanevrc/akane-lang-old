@@ -11,7 +11,7 @@ macro_rules! bail_info {
     ($info:expr, $msg:expr, $($arg:tt)*) => {
         {
             let info = $info;
-            anyhow::bail!("({}, {}): {}", info.line, info.column, format!($msg, $($arg)*))
+            anyhow::bail!("({}, {}): {}", info.line, info.column, format!($msg, $($arg),*))
         }
     };
 }

@@ -86,12 +86,15 @@ fn assume_semicolon<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Res
 
 fn assume_keyword_or_ident<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
     if is_ident_head(str_iter.peek()) {
-        let (info, c) = str_iter.next().unwrap();
+        let (info_head, c) = str_iter.next().unwrap();
         let mut token = String::from(c);
+        let mut info_tail = info_head.clone();
         while is_ident_tail(str_iter.peek()) {
-            let (_, c) = str_iter.next().unwrap();
+            let (info, c) = str_iter.next().unwrap();
             token.push(c);
+            info_tail = info;
         }
+        let info = info_head.extend(info_tail);
         if is_ty(&token) {
             Ok(Some(TokenInfo::new(ty_keyword(), info)))
         }
@@ -109,12 +112,15 @@ fn assume_keyword_or_ident<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>)
 
 fn assume_num<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
     if is_num(str_iter.peek()) {
-        let (info, c) = str_iter.next().unwrap();
+        let (info_head, c) = str_iter.next().unwrap();
         let mut token = String::from(c);
+        let mut info_tail = info_head.clone();
         while is_num(str_iter.peek()) {
-            let (_, c) = str_iter.next().unwrap();
+            let (info, c) = str_iter.next().unwrap();
             token.push(c);
+            info_tail = info;
         }
+        let info = info_head.extend(info_tail);
         Ok(Some(TokenInfo::new(num(token), info)))
     }
     else {
@@ -139,12 +145,15 @@ fn assume_paren<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<
 
 fn assume_symbol_or_op_code<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
     if is_op_code(str_iter.peek()) {
-        let (info, c) = str_iter.next().unwrap();
+        let (info_head, c) = str_iter.next().unwrap();
         let mut token = String::from(c);
+        let mut info_tail = info_head.clone();
         while is_op_code(str_iter.peek()) {
-            let (_, c) = str_iter.next().unwrap();
+            let (info, c) = str_iter.next().unwrap();
             token.push(c);
+            info_tail = info;
         }
+        let info = info_head.extend(info_tail);
         if is_arrow(&token) {
             Ok(Some(TokenInfo::new(arrow(), info)))
         }

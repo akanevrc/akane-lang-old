@@ -5,13 +5,21 @@ use std::{
     iter::Peekable,
     rc::Rc,
 };
-use anyhow::{
-    bail,
-    Result,
-};
+use anyhow::Result;
 use crate::data::*;
+use crate::bail_info;
 
-pub fn parse(input: Vec<Token>) -> Result<Vec<TopDefEnum>> {
+macro_rules! bail_tokens_with_line {
+    ($tokens:expr, $msg:literal) => {
+        {
+            let info = &$tokens.peek().unwrap().1;
+            let target_part_of_line = format!("\n{}", info.target_part_of_line());
+            bail_info!(info, $msg, target_part_of_line)
+        }
+    };
+}
+
+pub fn parse<'input>(input: Vec<TokenInfo<'input>>) -> Result<Vec<TopDefEnum>> {
     let mut asts = Vec::new();
     let mut tokens = input.into_iter().peekable();
     loop {
@@ -22,11 +30,11 @@ pub fn parse(input: Vec<Token>) -> Result<Vec<TopDefEnum>> {
             asts.push(ast);
             continue;
         }
-        bail!("Invalid top-level definition.");
+        bail_tokens_with_line!(tokens, "Invalid top-level definition:{}");
     }
 }
 
-fn assume_eof(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<()>> {
+fn assume_eof<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<()>> {
     if let Some(_) = tokens.peek() {
         Ok(None)
     }
@@ -35,7 +43,7 @@ fn assume_eof(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     }
 }
 
-fn assume_top_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TopDefEnum>> {
+fn assume_top_def<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<TopDefEnum>> {
     let ret =
         if let Some(ast) = assume_fn_def(tokens)? {
             Ok(Some(top_fn_def_ast(ast)))
@@ -47,11 +55,11 @@ fn assume_top_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
         ret
     }
     else {
-        bail!("`;` required.");
+        bail_tokens_with_line!(tokens, "`;` required:{}");
     }
 }
 
-fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<FnDefAst>> {
+fn assume_fn_def<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<FnDefAst>> {
     let mut ty_annot = None;
     if let Some(_) = assume_simple_token(tokens, ty_keyword())? {
         if let Some(ty_expr) = assume_ty_expr(tokens)? {
@@ -64,18 +72,18 @@ fn assume_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
                 if let Some(expr) = assume_expr(tokens)? {
                     return Ok(Some(fn_def_ast(ty_annot, left_fn_def, expr)));
                 }
-                bail!("Expression required.");
+                bail_tokens_with_line!(tokens, "Expression required:{}");
             }
-            bail!("`=` required.");
+            bail_tokens_with_line!(tokens, "`=` required:{}");
         }
-        bail!("Left function definition required.");
+        bail_tokens_with_line!(tokens, "Left function definition required:{}");
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
+fn assume_ty_expr<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<TyExprAst>>> {
     let mut exprs = Vec::new();
     if let Some(lhs) = assume_ty_lhs(tokens)? {
         exprs.push(lhs);
@@ -94,7 +102,7 @@ fn assume_ty_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
     }
 }
 
-fn assume_ty_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
+fn assume_ty_lhs<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<TyExprAst>>> {
     if let Some(term) = assume_ty_term(tokens)? {
         Ok(Some(term))
     }
@@ -103,20 +111,20 @@ fn assume_ty_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     }
 }
 
-fn assume_ty_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
-    if let Some(Token::Arrow) = tokens.peek() {
+fn assume_ty_rhs<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<TyExprAst>>> {
+    if let Some(Token::Arrow) = tokens.peek().map(|token| token.0.clone()) {
         tokens.next();
         if let Some(term) = assume_ty_term(tokens)? {
             return Ok(Some(term));
         }
-        bail!("Type term required.");
+        bail_tokens_with_line!(tokens, "Type term required:{}");
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
+fn assume_ty_term<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<TyExprAst>>> {
     if let Some(factor) = assume_ty_factor(tokens)? {
         Ok(Some(factor))
     }
@@ -125,7 +133,7 @@ fn assume_ty_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<
     }
 }
 
-fn assume_ty_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>> {
+fn assume_ty_factor<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<TyExprAst>>> {
     if let Some(expr) = assume_ty_paren(tokens)? {
         Ok(Some(expr))
     }
@@ -137,25 +145,25 @@ fn assume_ty_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Resul
     }
 }
 
-fn assume_ty_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<TyExprAst>>>  {
-    if let Some(Token::LParen) = tokens.peek() {
+fn assume_ty_paren<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<TyExprAst>>>  {
+    if let Some(Token::LParen) = tokens.peek().map(|token| token.0.clone()) {
         tokens.next();
         if let Some(expr) = assume_ty_expr(tokens)? {
-            if let Some(Token::RParen) = tokens.peek() {
+            if let Some(Token::RParen) = tokens.peek().map(|token| token.0.clone()) {
                 tokens.next();
                 return Ok(Some(expr))
             }
-            bail!("`)` required.")
+            bail_tokens_with_line!(tokens, "`)` required:{}")
         }
-        bail!("Expression required.")
+        bail_tokens_with_line!(tokens, "Expression required:{}")
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_ty_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<TyIdentAst>> {
-    if let Some(Token::Ident(name)) = tokens.peek() {
+fn assume_ty_ident<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<TyIdentAst>> {
+    if let Some(Token::Ident(name)) = tokens.peek().map(|token| token.0.clone()) {
         let name = name.to_owned();
         tokens.next();
         Ok(Some(ty_ident_ast(name)))
@@ -165,7 +173,7 @@ fn assume_ty_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result
     }
 }
 
-fn assume_left_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<LeftFnDefAst>> {
+fn assume_left_fn_def<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<LeftFnDefAst>> {
     if let Some(ident) = assume_ident(tokens)? {
         let mut args = Vec::new();
         loop {
@@ -181,11 +189,11 @@ fn assume_left_fn_def(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Res
     }
 }
 
-fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
+fn assume_expr<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(lhs) = assume_prefix_op_lhs(tokens)? {
         let mut lhs = lhs;
         while let Some((op_code, rhs)) = assume_infix_op_rhs(tokens)? {
-            let name = infix_op_name(&op_code)?;
+            let name = infix_op_name(&op_code, tokens)?;
             lhs = fn_expr_ast(infix_op_ast(name, lhs, rhs));
         }
         Ok(Some(lhs))
@@ -195,7 +203,7 @@ fn assume_expr(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     }
 }
 
-fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
+fn assume_term<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(factor) = assume_factor(tokens)? {
         let mut term = factor;
         while let Some(f) = assume_factor(tokens)? {
@@ -208,16 +216,16 @@ fn assume_term(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opt
     }
 }
 
-fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
-    if let Some(Token::OpCode(op_code)) = tokens.peek() {
+fn assume_prefix_op_lhs<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst>>> {
+    if let Some(Token::OpCode(op_code)) = tokens.peek().map(|token| token.0.clone()) {
         let op_code = op_code.to_owned();
         if op_code == "-" {
             tokens.next();
             if let Some(term) = assume_term(tokens)? {
-                let name = prefix_op_name(&op_code)?;
+                let name = prefix_op_name(&op_code, tokens)?;
                 return Ok(Some(fn_expr_ast(prefix_op_ast(name, term))));
             }
-            bail!("Term required.");
+            bail_tokens_with_line!(tokens, "Term required:{}");
         }
         Ok(None)
     }
@@ -229,21 +237,21 @@ fn assume_prefix_op_lhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> R
     }
 }
 
-fn assume_infix_op_rhs(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<(String, Rc<ExprAst>)>> {
-    if let Some(Token::OpCode(op_code)) = tokens.peek() {
+fn assume_infix_op_rhs<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<(String, Rc<ExprAst>)>> {
+    if let Some(Token::OpCode(op_code)) = tokens.peek().map(|token| token.0.clone()) {
         let op_code = op_code.to_owned();
         tokens.next();
         if let Some(term) = assume_term(tokens)? {
             return Ok(Some((op_code, term)));
         }
-        bail!("Term required.");
+        bail_tokens_with_line!(tokens, "Term required:{}");
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>> {
+fn assume_factor<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst>>> {
     if let Some(expr) = assume_paren(tokens)? {
         Ok(Some(expr))
     }
@@ -258,25 +266,25 @@ fn assume_factor(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<O
     }
 }
 
-fn assume_paren(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<Rc<ExprAst>>>  {
-    if let Some(Token::LParen) = tokens.peek() {
+fn assume_paren<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst>>>  {
+    if let Some(Token::LParen) = tokens.peek().map(|token| token.0.clone()) {
         tokens.next();
         if let Some(expr) = assume_expr(tokens)? {
-            if let Some(Token::RParen) = tokens.peek() {
+            if let Some(Token::RParen) = tokens.peek().map(|token| token.0.clone()) {
                 tokens.next();
                 return Ok(Some(expr))
             }
-            bail!("`)` required.")
+            bail_tokens_with_line!(tokens, "`)` required:{}")
         }
-        bail!("Expression required.")
+        bail_tokens_with_line!(tokens, "Expression required:{}")
     }
     else {
         Ok(None)
     }
 }
 
-fn assume_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<IdentAst>> {
-    if let Some(Token::Ident(name)) = tokens.peek() {
+fn assume_ident<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<IdentAst>> {
+    if let Some(Token::Ident(name)) = tokens.peek().map(|token| token.0.clone()) {
         let name = name.to_owned();
         tokens.next();
         Ok(Some(ident_ast(name)))
@@ -286,8 +294,8 @@ fn assume_ident(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Op
     }
 }
 
-fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Option<IdentAst>> {
-    if let Some(Token::Num(value)) = tokens.peek() {
+fn assume_num<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<IdentAst>> {
+    if let Some(Token::Num(value)) = tokens.peek().map(|token| token.0.clone()) {
         let value = value.to_owned();
         tokens.next();
         Ok(Some(ident_ast(value)))
@@ -297,9 +305,9 @@ fn assume_num(tokens: &mut Peekable<impl Iterator<Item = Token>>) -> Result<Opti
     }
 }
 
-fn assume_simple_token(tokens: &mut Peekable<impl Iterator<Item = Token>>, assumed: Token) -> Result<Option<()>> {
-    if let Some(token) = tokens.peek() {
-        if *token == assumed {
+fn assume_simple_token<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>, assumed: Token) -> Result<Option<()>> {
+    if let Some(token) = tokens.peek().map(|token| token.0.clone()) {
+        if token == assumed {
             tokens.next();
             Ok(Some(()))
         }
@@ -312,20 +320,20 @@ fn assume_simple_token(tokens: &mut Peekable<impl Iterator<Item = Token>>, assum
     }
 }
 
-fn prefix_op_name(op_code: &str) -> Result<String> {
+fn prefix_op_name<'input>(op_code: &str, tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<String> {
     if op_code == "-" {
         Ok("negate".to_owned())
     }
     else {
-        bail!("Invalid prefix operator.");
+        bail_tokens_with_line!(tokens, "Invalid prefix operator:{}");
     }
 }
 
-fn infix_op_name(op_code: &str) -> Result<String> {
+fn infix_op_name<'input>(op_code: &str, tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<String> {
     if op_code == "+" {
         Ok("add".to_owned())
     }
     else {
-        bail!("Invalid infix operator.");
+        bail_tokens_with_line!(tokens, "Invalid infix operator:{}");
     }
 }

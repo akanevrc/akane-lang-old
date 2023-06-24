@@ -2,7 +2,7 @@ use std::rc::Rc;
 use crate::data::*;
 
 fn parse(s: &str) -> Vec<TopDefEnum> {
-    super::parse(crate::lexer::lex(s).unwrap().into_iter().map(|token| token.0).collect()).unwrap()
+    super::parse(crate::lexer::lex(s).unwrap()).unwrap()
 }
 
 fn ty_ident_ast(name: &str) -> TyIdentAst {

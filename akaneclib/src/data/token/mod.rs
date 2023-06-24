@@ -1,10 +1,8 @@
-mod str_info;
-mod str_info_iterator;
 mod ctor;
 
-pub use str_info::*;
-pub use str_info_iterator::*;
 pub use ctor::*;
+
+use crate::data::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TokenInfo<'input>(
