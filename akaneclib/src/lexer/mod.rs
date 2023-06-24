@@ -2,11 +2,9 @@
 mod tests;
 
 use std::iter::Peekable;
-use anyhow::{
-    bail,
-    Result,
-};
+use anyhow::Result;
 use crate::data::*;
+use crate::bail_info;
 
 pub fn lex(input: &str) -> Result<Vec<TokenInfo>> {
     let mut tokens = Vec::new();
@@ -27,7 +25,8 @@ pub fn lex(input: &str) -> Result<Vec<TokenInfo>> {
             tokens.push(token);
             continue;
         }
-        bail!("No valid token found.")
+        let (info, c) = &str_iter.peek().unwrap();
+        bail_info!(info, "Invalid token found: `{}`", c);
     }
 }
 

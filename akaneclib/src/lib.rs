@@ -4,3 +4,4 @@ pub mod parser;
 pub mod semantizer;
 pub mod codegen;
 pub mod compiler;
+mod macros;
