@@ -1,28 +1,72 @@
 use std::rc::Rc;
-use crate::data::*;
+use crate::data::{
+    self,
+    *,
+};
 
-fn parse(s: &str) -> Vec<TopDefEnum> {
+fn parse<'input>(s: &'input str) -> Vec<TopDefEnum<'input>> {
     super::parse(crate::lexer::lex(s).unwrap()).unwrap()
 }
 
-fn ty_ident_ast(name: &str) -> TyIdentAst {
-    crate::data::ty_ident_ast(name.to_owned())
+fn top_fn_def_ast<'input>(fn_def_ast: FnDefAst<'input>) -> TopDefEnum<'input> {
+    data::top_fn_def_ast(fn_def_ast)
 }
 
-fn left_fn_def_ast(name: &str, args: &[&str]) -> LeftFnDefAst {
-    crate::data::left_fn_def_ast(name.to_owned(), args.to_owned().into_iter().map(|s| s.to_owned()).collect())
+fn fn_def_ast<'input>(ty_annot: Option<Rc<TyExprAst<'input>>>, left_fn_def: LeftFnDefAst<'input>, expr: Rc<ExprAst<'input>>) -> FnDefAst<'input> {
+    data::fn_def_ast(ty_annot, left_fn_def, expr, dummy_info())
 }
 
-fn prefix_op_ast(op_code: &str, rhs: Rc<ExprAst>) -> FnAst {
-    crate::data::prefix_op_ast(op_code.to_owned(), rhs)
+fn ty_arrow_expr_ast<'input>(ty_arrow: TyArrowAst<'input>) -> Rc<TyExprAst<'input>> {
+    data::ty_arrow_expr_ast(ty_arrow, dummy_info())
 }
 
-fn infix_op_ast(op_code: &str, lhs: Rc<ExprAst>, rhs: Rc<ExprAst>) -> FnAst {
-    crate::data::infix_op_ast(op_code.to_owned(), lhs, rhs)
+fn ty_ident_expr_ast<'input>(ty_ident: TyIdentAst<'input>) -> Rc<TyExprAst<'input>> {
+    data::ty_ident_expr_ast(ty_ident, dummy_info())
 }
 
-fn ident_ast(name: &str) -> IdentAst {
-    crate::data::ident_ast(name.to_owned())
+fn ty_arrow_ast<'input>(lhs: Rc<TyExprAst<'input>>, rhs: Rc<TyExprAst<'input>>) -> TyArrowAst<'input> {
+    data::ty_arrow_ast(lhs, rhs, dummy_info())
+}
+
+fn ty_ident_ast<'input>(name: &'input str) -> TyIdentAst<'input> {
+    data::ty_ident_ast(name.to_owned(), dummy_info())
+}
+
+fn left_fn_def_ast<'input>(name: &'input str, args: &[&'input str]) -> LeftFnDefAst<'input> {
+    data::left_fn_def_ast(name.to_owned(), args.to_owned().into_iter().map(|s| s.to_owned()).collect(), dummy_info())
+}
+
+fn fn_expr_ast<'input>(fn_ast: FnAst<'input>) -> Rc<ExprAst<'input>> {
+    data::fn_expr_ast(fn_ast, dummy_info())
+}
+
+fn ident_expr_ast<'input>(ident_ast: IdentAst<'input>) -> Rc<ExprAst<'input>> {
+    data::ident_expr_ast(ident_ast, dummy_info())
+}
+
+fn fn_ast<'input>(fn_expr: Rc<ExprAst<'input>>, arg_expr: Rc<ExprAst<'input>>) -> FnAst<'input> {
+    data::fn_ast(fn_expr, arg_expr, dummy_info())
+}
+
+fn prefix_op_ast<'input>(op_code: &'input str, rhs: Rc<ExprAst<'input>>) -> FnAst<'input> {
+    data::prefix_op_ast(op_code.to_owned(), rhs, dummy_info(), dummy_info())
+}
+
+fn infix_op_ast<'input>(op_code: &'input str, lhs: Rc<ExprAst<'input>>, rhs: Rc<ExprAst<'input>>) -> FnAst<'input> {
+    data::infix_op_ast(op_code.to_owned(), lhs, rhs, dummy_info(), dummy_info(), dummy_info())
+}
+
+fn ident_ast<'input>(name: &'input str) -> IdentAst<'input> {
+    data::ident_ast(name.to_owned(), dummy_info())
+}
+
+fn dummy_info<'a>() -> StrInfo<'a> {
+    StrInfo {
+        line: 0,
+        column: 0,
+        slice: "",
+        line_slice: "",
+    }
 }
 
 #[test]

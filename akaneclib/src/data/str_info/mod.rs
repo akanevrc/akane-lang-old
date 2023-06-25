@@ -7,7 +7,7 @@ use std::{
     str,
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct StrInfo<'a> {
     pub line: usize,
     pub column: usize,
@@ -15,12 +15,36 @@ pub struct StrInfo<'a> {
     pub line_slice: &'a str,
 }
 
+#[cfg(not(test))]
+impl<'a> PartialEq for StrInfo<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.line == other.line &&
+        self.column == other.column &&
+        self.slice == other.slice
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
+#[cfg(test)]
+impl<'a> PartialEq for StrInfo<'a> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
 impl<'a> StrInfo<'a> {
     pub fn new(line: usize, column: usize, slice: &'a str, line_slice: &'a str) -> Self {
         Self { line, column, slice, line_slice }
     }
 
-    pub fn extend(self, tail: Self) -> Self {
+    pub fn extend(&self, tail: &Self) -> Self {
         let head = self.slice.as_ptr() as usize;
         let tail = tail.slice.as_ptr() as usize;
         let len = tail - head + 1;

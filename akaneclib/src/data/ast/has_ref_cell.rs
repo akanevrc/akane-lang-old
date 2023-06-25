@@ -18,7 +18,7 @@ pub trait HasRefCell<T> {
 
 macro_rules! impl_has_ref_cell {
     ($ty:ty, $field:ident, $t:ty) => {
-        impl HasRefCell<$t> for $ty {
+        impl<'input> HasRefCell<$t> for $ty {
             fn ref_cell(&self) -> &RefCell<Option<Rc<$t>>> {
                 &self.$field
             }
@@ -26,19 +26,19 @@ macro_rules! impl_has_ref_cell {
     };
 }
 
-impl_has_ref_cell!(FnDefAst, fn_key, FnKey);
-impl_has_ref_cell!(FnDefAst, arg_sems, Vec<Rc<FnSem>>);
-impl_has_ref_cell!(TyExprAst, ty_sem, TySem);
-impl_has_ref_cell!(TyArrowAst, ty_sem, TySem);
-impl_has_ref_cell!(TyIdentAst, ty_sem, TySem);
-impl_has_ref_cell!(ExprAst, ty_sem, TySem);
-impl_has_ref_cell!(ExprAst, fn_sem, FnSem);
-impl_has_ref_cell!(FnAst, ty_sem, TySem);
-impl_has_ref_cell!(FnAst, fn_sem, FnSem);
-impl_has_ref_cell!(IdentAst, ty_sem, TySem);
-impl_has_ref_cell!(IdentAst, fn_sem, FnSem);
+impl_has_ref_cell!(FnDefAst<'input>, fn_key, FnKey);
+impl_has_ref_cell!(FnDefAst<'input>, arg_sems, Vec<Rc<FnSem>>);
+impl_has_ref_cell!(TyExprAst<'input>, ty_sem, TySem);
+impl_has_ref_cell!(TyArrowAst<'input>, ty_sem, TySem);
+impl_has_ref_cell!(TyIdentAst<'input>, ty_sem, TySem);
+impl_has_ref_cell!(ExprAst<'input>, ty_sem, TySem);
+impl_has_ref_cell!(ExprAst<'input>, fn_sem, FnSem);
+impl_has_ref_cell!(FnAst<'input>, ty_sem, TySem);
+impl_has_ref_cell!(FnAst<'input>, fn_sem, FnSem);
+impl_has_ref_cell!(IdentAst<'input>, ty_sem, TySem);
+impl_has_ref_cell!(IdentAst<'input>, fn_sem, FnSem);
 
-impl HasRefCell<TySem> for TyExprEnum {
+impl<'input> HasRefCell<TySem> for TyExprEnum<'input> {
     fn ref_cell(&self) -> &RefCell<Option<Rc<TySem>>> {
         match self {
             Self::Arrow(arrow) => arrow.ref_cell(),
@@ -47,7 +47,7 @@ impl HasRefCell<TySem> for TyExprEnum {
     }
 }
 
-impl HasRefCell<TySem> for ExprEnum {
+impl<'input> HasRefCell<TySem> for ExprEnum<'input> {
     fn ref_cell(&self) -> &RefCell<Option<Rc<TySem>>> {
         match self {
             Self::Fn(f) => f.ref_cell(),
@@ -56,7 +56,7 @@ impl HasRefCell<TySem> for ExprEnum {
     }
 }
 
-impl HasRefCell<FnSem> for ExprEnum {
+impl<'input> HasRefCell<FnSem> for ExprEnum<'input> {
     fn ref_cell(&self) -> &RefCell<Option<Rc<FnSem>>> {
         match self {
             Self::Fn(f) => f.ref_cell(),

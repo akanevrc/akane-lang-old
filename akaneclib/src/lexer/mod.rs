@@ -9,7 +9,7 @@ use anyhow::{
 use crate::data::*;
 use crate::bail_info;
 
-pub fn lex(input: &str) -> Result<Vec<TokenInfo>, Vec<Error>> {
+pub fn lex<'input>(input: &'input str) -> Result<Vec<TokenInfo<'input>>, Vec<Error>> {
     let mut tokens = Vec::new();
     let mut errs = Vec::new();
     let mut str_iter = StrInfoIter::new(input).peekable();
@@ -121,7 +121,7 @@ fn assume_keyword_or_ident<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>)
             token.push(c);
             info_tail = info;
         }
-        let info = info_head.extend(info_tail);
+        let info = info_head.extend(&info_tail);
         if is_ty(&token) {
             Ok(Some(TokenInfo::new(ty_keyword(), info)))
         }
@@ -147,7 +147,7 @@ fn assume_num<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Op
             token.push(c);
             info_tail = info;
         }
-        let info = info_head.extend(info_tail);
+        let info = info_head.extend(&info_tail);
         Ok(Some(TokenInfo::new(num(token), info)))
     }
     else {
@@ -180,7 +180,7 @@ fn assume_symbol_or_op_code<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>
             token.push(c);
             info_tail = info;
         }
-        let info = info_head.extend(info_tail);
+        let info = info_head.extend(&info_tail);
         if is_arrow(&token) {
             Ok(Some(TokenInfo::new(arrow(), info)))
         }
