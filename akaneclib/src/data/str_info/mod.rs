@@ -35,7 +35,7 @@ impl<'a> StrInfo<'a> {
     }
 
     pub fn target_part_of_line(&self) -> String {
-        format!("\t{}\n\t{}", self.line_slice, self.underline())
+        format!("{}\n{}", self.line_slice, self.underline())
     }
 
     fn underline(&self) -> String {
