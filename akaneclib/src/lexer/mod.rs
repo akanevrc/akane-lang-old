@@ -2,29 +2,56 @@
 mod tests;
 
 use std::iter::Peekable;
-use anyhow::Result;
+use anyhow::{
+    Error,
+    Result
+};
 use crate::data::*;
 use crate::bail_info;
 
-pub fn lex(input: &str) -> Result<Vec<TokenInfo>> {
+pub fn lex(input: &str) -> Result<Vec<TokenInfo>, Vec<Error>> {
     let mut tokens = Vec::new();
+    let mut errs = Vec::new();
     let mut str_iter = StrInfoIter::new(input).peekable();
     loop {
-        if let Some(_) = assume_eof(&mut str_iter)? {
-            if let Some(TokenInfo(last, info)) = tokens.last() {
-                if *last != semicolon() {
-                    tokens.push(TokenInfo::new(semicolon(), info.clone()));
+        match assume(&mut str_iter) {
+            Ok(Some(Some(token))) =>
+                tokens.push(token),
+            Ok(Some(None)) =>
+                (),
+            Ok(None) => {
+                if let Some(TokenInfo(last, info)) = tokens.last() {
+                    if *last != semicolon() {
+                        tokens.push(TokenInfo::new(semicolon(), info.clone()));
+                    }
                 }
-            }
-            return Ok(tokens);
+                break;
+            },
+            Err(e) => {
+                errs.push(e);
+                str_iter.next();
+            },
         }
-        if let Some(_) = assume_whitespace(&mut str_iter)? {
-            continue;
-        }
-        if let Some(token) = assume_token(&mut str_iter)? {
-            tokens.push(token);
-            continue;
-        }
+    }
+    if errs.len() == 0 {
+        Ok(tokens)
+    }
+    else {
+        Err(errs)
+    }
+}
+
+fn assume<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<Option<TokenInfo<'input>>>> {
+    if let Some(_) = assume_eof(str_iter)? {
+        Ok(None)
+    }
+    else if let Some(_) = assume_whitespace(str_iter)? {
+        Ok(Some(None))
+    }
+    else if let Some(token) = assume_token(str_iter)? {
+        Ok(Some(Some(token)))
+    }
+    else {
         let (info, c) = &str_iter.peek().unwrap();
         bail_info!(info, "Invalid token found: `{}`", c);
     }

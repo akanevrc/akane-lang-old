@@ -1,4 +1,7 @@
-use anyhow::Result;
+use anyhow::{
+    bail,
+    Result,
+};
 use clap::Parser;
 use akaneclib::compiler;
 
@@ -15,6 +18,19 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    compiler::compile(&args.input, &args.output)?;
-    Ok(())
+    match compiler::compile(&args.input, &args.output) {
+        Ok(()) => Ok(()),
+        Err(errs) => {
+            let err_count = errs.len();
+            for e in errs {
+                eprintln!("{}", e);
+            }
+            if err_count == 1 {
+                bail!("{} error found.", err_count);
+            }
+            else {
+                bail!("{} errors found.", err_count);
+            }
+        }
+    }
 }

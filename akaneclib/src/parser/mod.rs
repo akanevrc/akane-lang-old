@@ -5,7 +5,10 @@ use std::{
     iter::Peekable,
     rc::Rc,
 };
-use anyhow::Result;
+use anyhow::{
+    Error,
+    Result,
+};
 use crate::data::*;
 use crate::bail_info;
 
@@ -19,17 +22,38 @@ macro_rules! bail_tokens_with_line {
     };
 }
 
-pub fn parse<'input>(input: Vec<TokenInfo<'input>>) -> Result<Vec<TopDefEnum>> {
+pub fn parse<'input>(input: Vec<TokenInfo<'input>>) -> Result<Vec<TopDefEnum>, Vec<Error>> {
     let mut asts = Vec::new();
+    let mut errs = Vec::new();
     let mut tokens = input.into_iter().peekable();
     loop {
-        if let Some(_) = assume_eof(&mut tokens)? {
-            return Ok(asts);
+        match assume(&mut tokens) {
+            Ok(Some(ast)) =>
+                asts.push(ast),
+            Ok(None) =>
+                break,
+            Err(e) => {
+                errs.push(e);
+                tokens.next();
+            },
         }
-        if let Some(ast) = assume_top_def(&mut tokens)? {
-            asts.push(ast);
-            continue;
-        }
+    }
+    if errs.len() == 0 {
+        Ok(asts)
+    }
+    else {
+        Err(errs)
+    }
+}
+
+fn assume<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<TopDefEnum>> {
+    if let Some(_) = assume_eof(tokens)? {
+        Ok(None)
+    }
+    else if let Some(ast) = assume_top_def(tokens)? {
+        Ok(Some(ast))
+    }
+    else {
         bail_tokens_with_line!(tokens, "Invalid top-level definition:{}");
     }
 }
