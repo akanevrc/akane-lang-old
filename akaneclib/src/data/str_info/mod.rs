@@ -67,11 +67,14 @@ impl<'a> StrInfo<'a> {
         let line_head = self.line_slice.as_ptr() as usize;
         let spaces = (0 .. (slice_head - line_head)).map(|_| ' ').collect::<String>();
         let underline =
-            if self.slice.len() == 0 {
-                String::new()
+            if spaces.len() + self.slice.len() < self.line_slice.len() {
+                (0 .. self.slice.len()).map(|_| '^').collect::<String>()
+            }
+            else if spaces.len() < self.line_slice.len() {
+                (0 .. self.line_slice.len() - spaces.len()).map(|_| '^').collect::<String>()
             }
             else {
-                (0 .. self.slice.len()).map(|_| '^').collect::<String>()
+                String::new()
             };
         format!("{}{}", spaces, underline)
     }
