@@ -54,3 +54,19 @@ fn eval_add_nums() {
         assert_eq!(ffi::eval_add_nums(3, 5), 8);
     }
 }
+
+#[test]
+fn mul_and_add() {
+    unsafe {
+        assert_eq!(ffi::mul_and_add(1, 1, 1, 1), 2);
+        assert_eq!(ffi::mul_and_add(3, 5, 7, 9), 78);
+    }
+}
+
+#[test]
+fn mul_and_add_one() {
+    unsafe {
+        assert_eq!(ffi::mul_and_add_one(1, 1), 2);
+        assert_eq!(ffi::mul_and_add_one(3, 5), 16);
+    }
+}

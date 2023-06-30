@@ -295,6 +295,30 @@ impl LLVM {
         }
     }
 
+    pub fn build_br(&mut self, dest: LLVMBasicBlockRef) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildBr(self.builder, dest)
+            )
+        }
+    }
+
+    pub fn build_cond_br(&mut self, cond: LLVMValueRef, then_part: LLVMBasicBlockRef, else_part: LLVMBasicBlockRef) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildCondBr(self.builder, cond, then_part, else_part)
+            )
+        }
+    }
+
+    pub fn build_eq(&mut self, lhs: LLVMValueRef, rhs: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntEQ, lhs, rhs, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
     pub fn build_call(&mut self, fn_ty: LLVMTypeRef, fn_value: LLVMValueRef, args: &[LLVMValueRef], name: &str) -> Result<LLVMValueRef> {
         unsafe {
             let arg_count = args.len() as u32;
@@ -326,6 +350,30 @@ impl LLVM {
         unsafe {
             Self::ptr_to_result(
                 LLVMBuildAdd(self.builder, lhs, rhs, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_sub(&mut self, lhs: LLVMValueRef, rhs: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildSub(self.builder, lhs, rhs, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_mul(&mut self, lhs: LLVMValueRef, rhs: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildMul(self.builder, lhs, rhs, self.c_str_pool.c_str(name))
+            )
+        }
+    }
+
+    pub fn build_div(&mut self, lhs: LLVMValueRef, rhs: LLVMValueRef, name: &str) -> Result<LLVMValueRef> {
+        unsafe {
+            Self::ptr_to_result(
+                LLVMBuildSDiv(self.builder, lhs, rhs, self.c_str_pool.c_str(name))
             )
         }
     }

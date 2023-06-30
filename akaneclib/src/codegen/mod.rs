@@ -29,7 +29,7 @@ fn gen_fn_def(llvm: &mut LLVM, ctx: &SemContext, fn_def_ast: &FnDefAst) -> Resul
         HasRefCell::<Vec<Rc<FnSem>>>::get_rc(fn_def_ast).iter()
         .map(|arg| arg.logical_name())
         .collect::<Vec<_>>();
-    llvm::gen_fn_def(llvm, ctx, &fn_key, &args, |llvm| gen_expr(llvm, &fn_def_ast.expr))?;
+    llvm::gen_fn_def(llvm, ctx, &fn_key, &args, |llvm, _| gen_expr(llvm, &fn_def_ast.expr))?;
     llvm::gen_exported_fn(llvm, ctx, &fn_key, &args)?;
     Ok(())
 }

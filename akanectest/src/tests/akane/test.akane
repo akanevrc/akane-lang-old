@@ -21,3 +21,9 @@ fn eval_add_one a = eval_fn_1 add_one a;
 
 ty i64 -> i64 -> i64
 fn eval_add_nums a b = eval_fn_1 (add_nums a) b;
+
+ty i64 -> i64 -> i64 -> i64 -> i64
+fn mul_and_add a b c d = a * b + c * d;
+
+ty i64 -> i64 -> i64
+fn mul_and_add_one a b = add_one <| a * b;

@@ -209,6 +209,68 @@ fn parse_infix_op() {
 }
 
 #[test]
+fn parse_infix_op_prec() {
+    assert_eq!(
+        parse("fn f = a * b + c"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                None,
+                left_fn_def_ast("f", &[]),
+                fn_expr_ast(infix_op_ast(
+                    "add",
+                    fn_expr_ast(infix_op_ast(
+                        "mul",
+                        ident_expr_ast(ident_ast("a")),
+                        ident_expr_ast(ident_ast("b"))
+                    )),
+                    ident_expr_ast(ident_ast("c"))
+                ))
+            )
+        )]
+    );
+    assert_eq!(
+        parse("fn f = a + b * c"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                None,
+                left_fn_def_ast("f", &[]),
+                fn_expr_ast(infix_op_ast(
+                    "add",
+                    ident_expr_ast(ident_ast("a")),
+                    fn_expr_ast(infix_op_ast(
+                        "mul",
+                        ident_expr_ast(ident_ast("b")),
+                        ident_expr_ast(ident_ast("c"))
+                    ))
+                ))
+            )
+        )]
+    );
+}
+
+#[test]
+fn parse_infix_op_right_assoc() {
+    assert_eq!(
+        parse("fn f = a <| b <| c"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                None,
+                left_fn_def_ast("f", &[]),
+                fn_expr_ast(infix_op_ast(
+                    "l_pipeline",
+                    ident_expr_ast(ident_ast("a")),
+                    fn_expr_ast(infix_op_ast(
+                        "l_pipeline",
+                        ident_expr_ast(ident_ast("b")),
+                        ident_expr_ast(ident_ast("c"))
+                    )),
+                ))
+            )
+        )]
+    );
+}
+
+#[test]
 fn parse_paren() {
     assert_eq!(
         parse("fn f = (a + b) + c"),

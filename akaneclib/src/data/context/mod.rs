@@ -36,8 +36,13 @@ impl SemContext {
         let i64_ty = TySem::new_or_get_ty1(&mut ctx, top.clone(), "i64".to_owned());
         let i64_uni_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i64_ty.clone()], i64_ty.clone());
         FnSem::new_or_get(&mut ctx, top.clone(), "negate".to_owned(), i64_uni_op_ty);
-        let i64_bin_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i64_ty.clone(), i64_ty.clone()], i64_ty);
-        FnSem::new_or_get(&mut ctx, top, "add".to_owned(), i64_bin_op_ty);
+        let i64_bin_op_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i64_ty.clone(), i64_ty.clone()], i64_ty.clone());
+        FnSem::new_or_get(&mut ctx, top.clone(), "add".to_owned(), i64_bin_op_ty.clone());
+        FnSem::new_or_get(&mut ctx, top.clone(), "sub".to_owned(), i64_bin_op_ty.clone());
+        FnSem::new_or_get(&mut ctx, top.clone(), "mul".to_owned(), i64_bin_op_ty.clone());
+        FnSem::new_or_get(&mut ctx, top.clone(), "div".to_owned(), i64_bin_op_ty.clone());
+        let l_pipeline_ty = TySem::new_or_get_fn_ty(&mut ctx, top.clone(), vec![i64_bin_op_ty, i64_ty.clone()], i64_ty);
+        FnSem::new_or_get(&mut ctx, top, "l_pipeline".to_owned(), l_pipeline_ty);
         ctx
     }
 

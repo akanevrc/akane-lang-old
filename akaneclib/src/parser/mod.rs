@@ -12,6 +12,12 @@ use anyhow::{
 use crate::data::*;
 use crate::bail_info;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Assoc {
+    L,
+    R,
+}
+
 macro_rules! bail_tokens_with_line {
     ($tokens:expr, $msg:literal) => {
         {
@@ -230,13 +236,8 @@ fn assume_left_fn_def<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenIn
 
 fn assume_expr<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst<'input>>>> {
     if let Some(lhs) = assume_prefix_op_lhs(tokens)? {
-        let mut lhs = lhs;
-        while let Some((op_code, info, rhs)) = assume_infix_op_rhs(tokens)? {
-            let name = infix_op_name(&op_code, tokens)?;
-            let extended = lhs.str_info.extend(&rhs.str_info);
-            lhs = fn_expr_ast(infix_op_ast(name, lhs.clone(), rhs, extended.clone(), info, lhs.str_info.clone()), extended);
-        }
-        Ok(Some(lhs))
+        let expr = assume_infix_op_rhs(tokens, 0, lhs)?;
+        Ok(Some(expr))
     }
     else {
         Ok(None)
@@ -277,19 +278,36 @@ fn assume_prefix_op_lhs<'input>(tokens: &mut Peekable<impl Iterator<Item = Token
     }
 }
 
-fn assume_infix_op_rhs<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<(String, StrInfo<'input>, Rc<ExprAst<'input>>)>> {
-    if let Some(TokenInfo(Token::OpCode(op_code), info)) = tokens.peek() {
+fn assume_infix_op_rhs<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>, expr_prec: usize, mut lhs: Rc<ExprAst<'input>>) -> Result<Rc<ExprAst<'input>>> {
+    while let Some(TokenInfo(Token::OpCode(op_code), info)) = tokens.peek() {
         let op_code = op_code.clone();
         let info = info.clone();
-        tokens.next();
-        if let Some(term) = assume_term(tokens)? {
-            return Ok(Some((op_code, info, term)));
+        let (prec, assoc) = op_code_precedence(&op_code, tokens)?;
+        if prec < expr_prec {
+            return Ok(lhs);
         }
-        bail_tokens_with_line!(tokens, "Term required:{}");
+        tokens.next();
+        if let Some(rhs) = assume_term(tokens)? {
+            let mut rhs = rhs.clone();
+            if let Some(TokenInfo(Token::OpCode(next_op_code), _)) = tokens.peek() {
+                let next_op_code = next_op_code.clone();
+                let (next_prec, _) = op_code_precedence(&next_op_code, tokens)?;
+                if assoc == Assoc::L && prec < next_prec {
+                    rhs = assume_infix_op_rhs(tokens, prec + 1, rhs)?;
+                }
+                else if assoc == Assoc::R && prec <= next_prec {
+                    rhs = assume_infix_op_rhs(tokens, prec, rhs)?;
+                }
+            }
+            let name = infix_op_name(&op_code, tokens)?;
+            let extended = lhs.str_info.extend(&rhs.str_info);
+            lhs = fn_expr_ast(infix_op_ast(name, lhs.clone(), rhs, extended.clone(), info, lhs.str_info.clone()), extended);
+        }
+        else {
+            bail_tokens_with_line!(tokens, "Term required:{}");
+        }
     }
-    else {
-        Ok(None)
-    }
+    Ok(lhs)
 }
 
 fn assume_factor<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<Rc<ExprAst<'input>>>> {
@@ -365,19 +383,28 @@ fn assume_simple_token<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenI
 }
 
 fn prefix_op_name<'input>(op_code: &str, tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<String> {
-    if op_code == "-" {
-        Ok("negate".to_owned())
-    }
-    else {
-        bail_tokens_with_line!(tokens, "Invalid prefix operator:{}");
+    match op_code {
+        "-" => Ok("negate".to_owned()),
+        _ => bail_tokens_with_line!(tokens, "Invalid prefix operator:{}"),
     }
 }
 
 fn infix_op_name<'input>(op_code: &str, tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<String> {
-    if op_code == "+" {
-        Ok("add".to_owned())
+    match op_code {
+        "+" => Ok("add".to_owned()),
+        "-" => Ok("sub".to_owned()),
+        "*" => Ok("mul".to_owned()),
+        "/" => Ok("div".to_owned()),
+        "<|" => Ok("l_pipeline".to_owned()),
+        _ => bail_tokens_with_line!(tokens, "Invalid infix operator:{}"),
     }
-    else {
-        bail_tokens_with_line!(tokens, "Invalid infix operator:{}");
+}
+
+fn op_code_precedence<'input>(op_code: &str, tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<(usize, Assoc)> {
+    match op_code {
+        "*" | "/" => Ok((7, Assoc::L)),
+        "+" | "-" => Ok((6, Assoc::L)),
+        "<|" => Ok((1, Assoc::R)),
+        _ => bail_tokens_with_line!(tokens, "Invalid infix operator:{}"),
     }
 }
