@@ -16,4 +16,5 @@ Cargo.lock
 
 # akanevrc added
 /dev
-/lib
+/lib/*
+!/lib/.gitkeep
