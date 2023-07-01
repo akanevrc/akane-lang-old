@@ -257,10 +257,10 @@ fn parse_infix_op_right_assoc() {
                 None,
                 left_fn_def_ast("f", &[]),
                 fn_expr_ast(infix_op_ast(
-                    "l_pipeline",
+                    "pipelineL",
                     ident_expr_ast(ident_ast("a")),
                     fn_expr_ast(infix_op_ast(
-                        "l_pipeline",
+                        "pipelineL",
                         ident_expr_ast(ident_ast("b")),
                         ident_expr_ast(ident_ast("c"))
                     )),

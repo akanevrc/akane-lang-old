@@ -11,7 +11,7 @@ pub fn gen_init(llvm: &mut LLVM, ctx: &SemContext) -> Result<()> {
     gen_arith_def(llvm, ctx, "sub", |llvm, lhs, rhs| llvm.build_sub(lhs, rhs, "sub"))?;
     gen_arith_def(llvm, ctx, "mul", |llvm, lhs, rhs| llvm.build_mul(lhs, rhs, "mul"))?;
     gen_arith_def(llvm, ctx, "div", |llvm, lhs, rhs| llvm.build_div(lhs, rhs, "div"))?;
-    gen_l_pipeline_def(llvm, ctx)?;
+    gen_pipeline_l_def(llvm, ctx)?;
     Ok(())
 }
 
@@ -223,8 +223,8 @@ fn gen_arith_def(llvm: &mut LLVM, ctx: &SemContext, name: &str, build: impl FnOn
     })
 }
 
-fn gen_l_pipeline_def(llvm: &mut LLVM, ctx: &SemContext) -> Result<()> {
-    let name = "l_pipeline";
+fn gen_pipeline_l_def(llvm: &mut LLVM, ctx: &SemContext) -> Result<()> {
+    let name = "pipelineL";
     let fn_key = FnKey::new(QualKey::top(), name.to_owned());
     let lhs_name = format!("{}.lhs", name);
     let rhs_name = format!("{}.rhs", name);

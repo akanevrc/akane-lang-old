@@ -395,7 +395,7 @@ fn infix_op_name<'input>(op_code: &str, tokens: &mut Peekable<impl Iterator<Item
         "-" => Ok("sub".to_owned()),
         "*" => Ok("mul".to_owned()),
         "/" => Ok("div".to_owned()),
-        "<|" => Ok("l_pipeline".to_owned()),
+        "<|" => Ok("pipelineL".to_owned()),
         _ => bail_tokens_with_line!(tokens, "Invalid infix operator:{}"),
     }
 }
