@@ -2,28 +2,28 @@ ty i64
 fn one = 1;
 
 ty i64 -> i64
-fn add_one a = a + 1;
+fn addOne a = a + 1;
 
 ty i64 -> i64 -> i64
-fn add_nums a b = a + b;
+fn addNums a b = a + b;
 
 ty i64 -> i64 -> i64
-fn double_add_nums a b = add_nums (add_nums a b) (add_nums a b);
+fn doubleAddNums a b = addNums (addNums a b) (addNums a b);
 
 ty i64 -> i64 -> i64
-fn add_nums_paren a b = (add_nums a) b;
+fn addNumsParen a b = (addNums a) b;
 
 ty (i64 -> i64) -> i64 -> i64
-fn eval_fn_1 f a = f a;
+fn evalFn1 f a = f a;
 
 ty i64 -> i64
-fn eval_add_one a = eval_fn_1 add_one a;
+fn evalAddOne a = evalFn1 addOne a;
 
 ty i64 -> i64 -> i64
-fn eval_add_nums a b = eval_fn_1 (add_nums a) b;
+fn evalAddNums a b = evalFn1 (addNums a) b;
 
 ty i64 -> i64 -> i64 -> i64 -> i64
-fn mul_and_add a b c d = a * b + c * d;
+fn mulAndAdd a b c d = a * b + c * d;
 
 ty i64 -> i64 -> i64
-fn mul_and_add_one a b = add_one <| a * b;
+fn mulAndAddOne a b = addOne <| a * b;
