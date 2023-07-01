@@ -110,15 +110,15 @@ fn gen_fn_block(llvm: &mut LLVM, fn_value: LLVMValueRef, body: impl FnOnce(&mut 
 
 fn decl_externals(llvm: &mut LLVM) -> Result<()> {
     let ty = new_fn_thunk_ty(llvm)?;
-    llvm.add_function("__new_fn_thunk", ty)?;
+    llvm.add_function("__newFnThunk", ty)?;
     let ty = new_next_fn_thunk_ty(llvm)?;
-    llvm.add_function("__new_next_fn_thunk", ty)?;
+    llvm.add_function("__newNextFnThunk", ty)?;
     let ty = new_val_thunk_ty(llvm)?;
-    llvm.add_function("__new_val_thunk", ty)?;
+    llvm.add_function("__newValThunk", ty)?;
     let ty = call_thunk_ty(llvm)?;
-    llvm.add_function("__call_thunk", ty)?;
+    llvm.add_function("__callThunk", ty)?;
     let ty = debug_print_ty(llvm)?;
-    llvm.add_function("__debug_print", ty)?;
+    llvm.add_function("__debugPrint", ty)?;
     Ok(())
 }
 
@@ -171,31 +171,31 @@ fn add_exported_fn(llvm: &mut LLVM, name: &str, arity: usize) -> Result<LLVMValu
 }
 
 pub fn call_new_fn_thunk(llvm: &mut LLVM, fn_ptr: LLVMValueRef, arity: LLVMValueRef) -> Result<LLVMValueRef> {
-    let f = llvm.get_named_function("__new_fn_thunk")?;
+    let f = llvm.get_named_function("__newFnThunk")?;
     let ty = new_fn_thunk_ty(llvm)?;
     llvm.build_call(ty, f, &[fn_ptr, arity], "call")
 }
 
 pub fn call_new_next_fn_thunk(llvm: &mut LLVM, thunk: LLVMValueRef, fn_ptr: LLVMValueRef, arg: LLVMValueRef) -> Result<LLVMValueRef> {
-    let f = llvm.get_named_function("__new_next_fn_thunk")?;
+    let f = llvm.get_named_function("__newNextFnThunk")?;
     let ty = new_next_fn_thunk_ty(llvm)?;
     llvm.build_call(ty, f, &[thunk, fn_ptr, arg], "call")
 }
 
 pub fn call_new_val_thunk(llvm: &mut LLVM, val: LLVMValueRef) -> Result<LLVMValueRef> {
-    let f = llvm.get_named_function("__new_val_thunk")?;
+    let f = llvm.get_named_function("__newValThunk")?;
     let ty = new_val_thunk_ty(llvm)?;
     llvm.build_call(ty, f, &[val], "call")
 }
 
 pub fn call_call_thunk(llvm: &mut LLVM, thunk: LLVMValueRef, arg: LLVMValueRef) -> Result<LLVMValueRef> {
-    let f = llvm.get_named_function("__call_thunk")?;
+    let f = llvm.get_named_function("__callThunk")?;
     let ty = call_thunk_ty(llvm)?;
     llvm.build_call(ty, f, &[thunk, arg], "call")
 }
 
 pub fn _call_debug_print(llvm: &mut LLVM, thunk: LLVMValueRef) -> Result<LLVMValueRef> {
-    let f = llvm.get_named_function("__debug_print")?;
+    let f = llvm.get_named_function("__debugPrint")?;
     let ty = debug_print_ty(llvm)?;
     llvm.build_call(ty, f, &[thunk], "")
 }
