@@ -57,7 +57,9 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out_dir);
     println!("cargo:rustc-link-search=native={}/../lib", cargo_manifest_dir);
+    println!("cargo:rustc-link-search=native={}/../lib/bdwgc/out", cargo_manifest_dir);
     println!("cargo:rustc-link-lib=static=akanectest");
     println!("cargo:rustc-link-lib=static=akaneruntime");
+    println!("cargo:rustc-link-lib=dylib=gc");
     println!("cargo:rerun-if-changed=./src/tests/akane/test.akane");
 }

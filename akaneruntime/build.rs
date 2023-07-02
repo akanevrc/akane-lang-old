@@ -11,19 +11,27 @@ fn main() {
     if Path::new(&format!("{}/src/c/libakaneruntime.c", cargo_manifest_dir)).exists() {
         Command::new("clang-15")
         .args([
+            "-I",
+            &format!("{}/../lib/bdwgc/include", cargo_manifest_dir),
             "-c",
             "-o",
             &format!("{}/libakaneruntime.o", out_dir),
             &format!("{}/src/c/libakaneruntime.c", cargo_manifest_dir),
+            &format!("-L{}/../lib/bdwgc/out", cargo_manifest_dir),
+            "-lgc",
         ])
         .status()
         .or_else(|_|
             Command::new("clang")
             .args([
+                "-I",
+                &format!("{}/../lib/bdwgc/include", cargo_manifest_dir),
                 "-c",
                 "-o",
                 &format!("{}/libakaneruntime.o", out_dir),
                 &format!("{}/src/c/libakaneruntime.c", cargo_manifest_dir),
+                &format!("-L{}/../lib/bdwgc/out", cargo_manifest_dir),
+                "-lgc",
             ])
             .status()
         ).unwrap();

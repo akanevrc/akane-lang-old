@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <gc.h>
 
 typedef struct ThunkType {
     void *ptr;
@@ -11,11 +12,15 @@ typedef struct ThunkType {
 } Thunk;
 
 static Thunk *allocThunk() {
-    return malloc(sizeof(Thunk));
+    return GC_MALLOC(sizeof(Thunk));
 }
 
 static Thunk **allocThunkArray(int64_t len) {
-    return malloc(sizeof(Thunk *) * len);
+    return GC_MALLOC(sizeof(Thunk *) * len);
+}
+
+void __init() {
+    GC_INIT();
 }
 
 Thunk *__newFnThunk(void *fn_ptr, int64_t arity) {
@@ -53,13 +58,6 @@ Thunk *__newValThunk(int64_t val) {
         .args = NULL,
     };
     return ptr;
-}
-
-void __deleteThunk(Thunk *thunk) {
-    if (thunk->args != NULL) {
-        free(thunk->args);
-    }
-    free(thunk);
 }
 
 Thunk *__callThunk(Thunk *thunk, Thunk *arg) {
