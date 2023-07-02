@@ -28,7 +28,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Git Clone BDWGC
+      - name: Clone and Build BDWGC
         run:
           cd lib &&
           git clone https://github.com/ivmai/bdwgc &&
