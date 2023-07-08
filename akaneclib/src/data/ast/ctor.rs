@@ -68,5 +68,13 @@ pub fn infix_op_ast<'input>(op_code: String, lhs: Rc<ExprAst<'input>>, rhs: Rc<E
 }
 
 pub fn ident_ast<'input>(name: String, str_info: StrInfo<'input>) -> IdentAst<'input> {
-    IdentAst { name, ty_sem: RefCell::new(None), fn_sem: RefCell::new(None), str_info }
+    IdentAst { ident: IdentEnum::Ident(name), ty_sem: RefCell::new(None), fn_sem: RefCell::new(None), str_info }
+}
+
+pub fn int_ast<'input>(name: String, str_info: StrInfo<'input>) -> IdentAst<'input> {
+    IdentAst { ident: IdentEnum::Int(name), ty_sem: RefCell::new(None), fn_sem: RefCell::new(None), str_info }
+}
+
+pub fn float_ast<'input>(name: String, str_info: StrInfo<'input>) -> IdentAst<'input> {
+    IdentAst { ident: IdentEnum::Float(name), ty_sem: RefCell::new(None), fn_sem: RefCell::new(None), str_info }
 }

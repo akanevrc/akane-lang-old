@@ -85,8 +85,15 @@ pub struct FnAst<'input> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentAst<'input> {
-    pub name: String,
+    pub ident: IdentEnum,
     pub ty_sem: RefCell<Option<Rc<TySem>>>,
     pub fn_sem: RefCell<Option<Rc<FnSem>>>,
     pub str_info: StrInfo<'input>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum IdentEnum {
+    Ident(String),
+    Int(String),
+    Float(String),
 }

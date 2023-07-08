@@ -211,22 +211,23 @@ fn assume_ty_ident<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<
 }
 
 fn assume_left_fn_def<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<LeftFnDefAst<'input>>> {
-    if let Some(ident) = assume_ident(tokens)? {
+    if let Some(IdentAst { ident: IdentEnum::Ident(ident), str_info: ident_info, .. }) = assume_ident(tokens)? {
         let mut args = Vec::new();
+        let mut arg_infos = Vec::new();
         loop {
-            if let Some(arg) = assume_ident(tokens)? {
+            if let Some(IdentAst { ident: IdentEnum::Ident(arg), str_info: arg_info, .. }) = assume_ident(tokens)? {
                 args.push(arg);
+                arg_infos.push(arg_info);
                 continue;
             }
             let extended =
-                if let Some(last) = args.last() {
-                    ident.str_info.extend(&last.str_info)
+                if let Some(last) = arg_infos.last() {
+                    ident_info.extend(&last)
                 }
                 else {
-                    ident.str_info
+                    ident_info
                 };
-            let names = args.into_iter().map(|arg| arg.name).collect();
-            return Ok(Some(left_fn_def_ast(ident.name, names, extended)));
+            return Ok(Some(left_fn_def_ast(ident, args, extended)));
         }
     }
     else {
@@ -320,6 +321,9 @@ fn assume_factor<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'i
     else if let Some(int) = assume_int(tokens)? {
         Ok(Some(ident_expr_ast(int.clone(), int.str_info)))
     }
+    else if let Some(float) = assume_float(tokens)? {
+        Ok(Some(ident_expr_ast(float.clone(), float.str_info)))
+    }
     else {
         Ok(None)
     }
@@ -359,7 +363,19 @@ fn assume_int<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'inpu
         let value = value.clone();
         let info = info.clone();
         tokens.next();
-        Ok(Some(ident_ast(value, info)))
+        Ok(Some(int_ast(value, info)))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn assume_float<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<IdentAst<'input>>> {
+    if let Some(TokenInfo(Token::Float(value), info)) = tokens.peek() {
+        let value = value.clone();
+        let info = info.clone();
+        tokens.next();
+        Ok(Some(float_ast(value, info)))
     }
     else {
         Ok(None)

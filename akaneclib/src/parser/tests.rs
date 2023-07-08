@@ -60,6 +60,14 @@ fn ident_ast<'input>(name: &'input str) -> IdentAst<'input> {
     data::ident_ast(name.to_owned(), dummy_info())
 }
 
+fn int_ast<'input>(name: &'input str) -> IdentAst<'input> {
+    data::int_ast(name.to_owned(), dummy_info())
+}
+
+fn float_ast<'input>(name: &'input str) -> IdentAst<'input> {
+    data::float_ast(name.to_owned(), dummy_info())
+}
+
 fn dummy_info<'a>() -> StrInfo<'a> {
     StrInfo {
         line: 0,
@@ -82,7 +90,7 @@ fn parse_arg() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &["a"]),
-                ident_expr_ast(ident_ast("0"))
+                ident_expr_ast(int_ast("0"))
             )
         )]
     );
@@ -130,7 +138,7 @@ fn parse_int() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                ident_expr_ast(ident_ast("0"))
+                ident_expr_ast(int_ast("0"))
             )
         )]
     );
@@ -140,7 +148,31 @@ fn parse_int() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                ident_expr_ast(ident_ast("123"))
+                ident_expr_ast(int_ast("123"))
+            )
+        )]
+    );
+}
+
+#[test]
+fn parse_float() {
+    assert_eq!(
+        parse("fn f = 0.0"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                None,
+                left_fn_def_ast("f", &[]),
+                ident_expr_ast(float_ast("0.0"))
+            )
+        )]
+    );
+    assert_eq!(
+        parse("fn f = 123.456"),
+        &[top_fn_def_ast(
+            fn_def_ast(
+                None,
+                left_fn_def_ast("f", &[]),
+                ident_expr_ast(float_ast("123.456"))
             )
         )]
     );
@@ -184,7 +216,7 @@ fn parse_infix_op() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                fn_expr_ast(infix_op_ast("add", ident_expr_ast(ident_ast("a")), ident_expr_ast(ident_ast("1"))))
+                fn_expr_ast(infix_op_ast("add", ident_expr_ast(ident_ast("a")), ident_expr_ast(int_ast("1"))))
             )
         )]
     );
@@ -318,7 +350,7 @@ fn parse_prefix_op() {
             fn_def_ast(
                 None,
                 left_fn_def_ast("f", &[]),
-                fn_expr_ast(prefix_op_ast("negate", ident_expr_ast(ident_ast("1"))))
+                fn_expr_ast(prefix_op_ast("negate", ident_expr_ast(int_ast("1"))))
             )
         )]
     );
@@ -332,7 +364,7 @@ fn parse_prefix_op() {
                     infix_op_ast(
                         "add",
                         fn_expr_ast(prefix_op_ast("negate", ident_expr_ast(ident_ast("a")))),
-                        ident_expr_ast(ident_ast("1"))
+                        ident_expr_ast(int_ast("1"))
                     )
                 )
             )
@@ -348,7 +380,7 @@ fn parse_ty_annot() {
             fn_def_ast(
                 Some(ty_ident_expr_ast(ty_ident_ast("i32"))),
                 left_fn_def_ast("f", &[]),
-                ident_expr_ast(ident_ast("0"))
+                ident_expr_ast(int_ast("0"))
             )
         )]
     );

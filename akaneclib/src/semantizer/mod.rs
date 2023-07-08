@@ -203,32 +203,41 @@ fn visit_fn(ctx: &mut SemContext, fn_ast: &FnAst) -> Result<(), Vec<Error>> {
 }
 
 fn visit_ident(ctx: &mut SemContext, ident_ast: &IdentAst) -> Result<(), Vec<Error>> {
-    if is_num(&ident_ast.name) {
-        let mut errs = Vec::new();
-        let top = QualSem::top(ctx);
-        let i64_ty = try_with_errors!(TySem::get_from_name(ctx, "i64"), ident_ast, errs);
-        ident_ast.set_rc(i64_ty.clone());
-        let f = FnSem::new_or_get(ctx, top, ident_ast.name.clone(), i64_ty);
-        ident_ast.set_rc(f.last().unwrap().clone());
-        return Ok(())
+    match &ident_ast.ident {
+        IdentEnum::Ident(ident) => {
+            let f_opt =
+                ctx.find_with_qual(|ctx, qual| {
+                    let key = FnKey::new(qual.to_key(), ident.clone());
+                    ctx.ranked_fn_store.get(&key).ok()
+                    .map(|fs| fs.first().unwrap().clone())
+                });
+            if let Some(f) = f_opt {
+                ident_ast.set_rc(f.ty.clone());
+                ident_ast.set_rc(f);
+                Ok(())
+            }
+            else {
+                let mut errs = Vec::new();
+                bail_ast_with_line!(errs, ident_ast, "Unknown function: `{}`{}", (ident));
+            }
+        },
+        IdentEnum::Int(int) => {
+            let mut errs = Vec::new();
+            let top = QualSem::top(ctx);
+            let i64_ty = try_with_errors!(TySem::get_from_name(ctx, "i64"), ident_ast, errs);
+            ident_ast.set_rc(i64_ty.clone());
+            let f = FnSem::new_or_get(ctx, top, int.clone(), i64_ty);
+            ident_ast.set_rc(f.last().unwrap().clone());
+            Ok(())
+        },
+        IdentEnum::Float(float) => {
+            let mut errs = Vec::new();
+            let top = QualSem::top(ctx);
+            let f64_ty = try_with_errors!(TySem::get_from_name(ctx, "f64"), ident_ast, errs);
+            ident_ast.set_rc(f64_ty.clone());
+            let f = FnSem::new_or_get(ctx, top, float.clone(), f64_ty);
+            ident_ast.set_rc(f.last().unwrap().clone());
+            Ok(())
+        },
     }
-    let f_opt =
-        ctx.find_with_qual(|ctx, qual| {
-            let key = FnKey::new(qual.to_key(), ident_ast.name.clone());
-            ctx.ranked_fn_store.get(&key).ok()
-            .map(|fs| fs.first().unwrap().clone())
-        });
-    if let Some(f) = f_opt {
-        ident_ast.set_rc(f.ty.clone());
-        ident_ast.set_rc(f);
-        Ok(())
-    }
-    else {
-        let mut errs = Vec::new();
-        bail_ast_with_line!(errs, ident_ast, "Unknown function: `{}`{}", (ident_ast.name));
-    }
-}
-
-fn is_num(name: &str) -> bool {
-    name.chars().next().map_or(false, |c| c.is_ascii_digit())
 }
