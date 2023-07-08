@@ -12,6 +12,10 @@ pub fn int(s: String) -> Token {
     Token::Int(s)
 }
 
+pub fn float(s: String) -> Token {
+    Token::Float(s)
+}
+
 pub fn op_code(s: String) -> Token {
     Token::OpCode(s)
 }

@@ -53,7 +53,7 @@ fn assume<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option
     }
     else {
         let (info, c) = &str_iter.peek().unwrap();
-        bail_info!(info, "Invalid token found: `{}`", c);
+        bail_info!(info, "Invalid character found: `{}`", c);
     }
 }
 
@@ -87,7 +87,7 @@ fn assume_token<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<
     else if let Some(token) = assume_keyword_or_ident(str_iter)? {
         Ok(Some(token))
     }
-    else if let Some(token) = assume_int(str_iter)? {
+    else if let Some(token) = assume_num(str_iter)? {
         Ok(Some(token))
     }
     else if let Some(token) = assume_paren(str_iter)? {
@@ -137,7 +137,7 @@ fn assume_keyword_or_ident<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>)
     }
 }
 
-fn assume_int<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
+fn assume_num<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Option<TokenInfo<'input>>> {
     if is_num(str_iter.peek()) {
         let (info_head, c) = str_iter.next().unwrap();
         let mut token = String::from(c);
@@ -147,8 +147,27 @@ fn assume_int<'input>(str_iter: &mut Peekable<StrInfoIter<'input>>) -> Result<Op
             token.push(c);
             info_tail = info;
         }
-        let info = info_head.extend(&info_tail);
-        Ok(Some(TokenInfo::new(int(token), info)))
+        if is_dot(str_iter.peek()) {
+            let (info, c) = str_iter.next().unwrap();
+            token.push(c);
+            info_tail = info.clone();
+            if is_num(str_iter.peek()) {
+                while is_num(str_iter.peek()) {
+                    let (info, c) = str_iter.next().unwrap();
+                    token.push(c);
+                    info_tail = info;
+                }
+                let info = info_head.extend(&info_tail);
+                Ok(Some(TokenInfo::new(float(token), info)))
+            }
+            else {
+                bail_info!(info, "Invalid character found: `{}`", c);
+            }
+        }
+        else {
+            let info = info_head.extend(&info_tail);
+            Ok(Some(TokenInfo::new(int(token), info)))
+        }
     }
     else {
         Ok(None)
@@ -214,6 +233,10 @@ fn is_ident_tail<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
 
 fn is_num<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
     c.map_or(false, |(_, c)| c.is_ascii_digit())
+}
+
+fn is_dot<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {
+    c.map_or(false, |(_, c)| *c == '.')
 }
 
 fn is_op_code<'input>(c: Option<&(StrInfo<'input>, char)>) -> bool {

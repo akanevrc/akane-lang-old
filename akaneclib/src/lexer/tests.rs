@@ -12,6 +12,10 @@ fn int(s: &str) -> Token {
     crate::data::int(s.to_owned())
 }
 
+fn float(s: &str) -> Token {
+    crate::data::float(s.to_owned())
+}
+
 fn op_code(s: &str) -> Token {
     crate::data::op_code(s.to_owned())
 }
@@ -40,6 +44,12 @@ fn lex_keyword_or_ident() {
 fn lex_int() {
     assert_eq!(lex("0"), &[int("0"), semicolon()]);
     assert_eq!(lex("1234567890"), &[int("1234567890"), semicolon()]);
+}
+
+#[test]
+fn lex_float() {
+    assert_eq!(lex("0.0"), &[float("0.0"), semicolon()]);
+    assert_eq!(lex("1234567890.0987654321"), &[float("1234567890.0987654321"), semicolon()]);
 }
 
 #[test]

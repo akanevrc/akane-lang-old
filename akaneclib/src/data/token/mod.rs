@@ -15,6 +15,7 @@ pub enum Token {
     Semicolon,
     Ident(String),
     Int(String),
+    Float(String),
     OpCode(String),
     Ty,
     Fn,
