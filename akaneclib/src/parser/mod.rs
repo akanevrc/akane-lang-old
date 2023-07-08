@@ -317,8 +317,8 @@ fn assume_factor<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'i
     else if let Some(ident) = assume_ident(tokens)? {
         Ok(Some(ident_expr_ast(ident.clone(), ident.str_info)))
     }
-    else if let Some(num) = assume_num(tokens)? {
-        Ok(Some(ident_expr_ast(num.clone(), num.str_info)))
+    else if let Some(int) = assume_int(tokens)? {
+        Ok(Some(ident_expr_ast(int.clone(), int.str_info)))
     }
     else {
         Ok(None)
@@ -354,8 +354,8 @@ fn assume_ident<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'in
     }
 }
 
-fn assume_num<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<IdentAst<'input>>> {
-    if let Some(TokenInfo(Token::Num(value), info)) = tokens.peek() {
+fn assume_int<'input>(tokens: &mut Peekable<impl Iterator<Item = TokenInfo<'input>>>) -> Result<Option<IdentAst<'input>>> {
+    if let Some(TokenInfo(Token::Int(value), info)) = tokens.peek() {
         let value = value.clone();
         let info = info.clone();
         tokens.next();

@@ -8,8 +8,8 @@ fn ident(s: &str) -> Token {
     crate::data::ident(s.to_owned())
 }
 
-fn num(s: &str) -> Token {
-    crate::data::num(s.to_owned())
+fn int(s: &str) -> Token {
+    crate::data::int(s.to_owned())
 }
 
 fn op_code(s: &str) -> Token {
@@ -37,9 +37,9 @@ fn lex_keyword_or_ident() {
 }
 
 #[test]
-fn lex_num() {
-    assert_eq!(lex("0"), &[num("0"), semicolon()]);
-    assert_eq!(lex("1234567890"), &[num("1234567890"), semicolon()]);
+fn lex_int() {
+    assert_eq!(lex("0"), &[int("0"), semicolon()]);
+    assert_eq!(lex("1234567890"), &[int("1234567890"), semicolon()]);
 }
 
 #[test]

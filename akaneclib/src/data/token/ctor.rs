@@ -8,8 +8,8 @@ pub fn ident(s: String) -> Token {
     Token::Ident(s)
 }
 
-pub fn num(s: String) -> Token {
-    Token::Num(s)
+pub fn int(s: String) -> Token {
+    Token::Int(s)
 }
 
 pub fn op_code(s: String) -> Token {

@@ -14,7 +14,7 @@ pub struct TokenInfo<'input>(
 pub enum Token {
     Semicolon,
     Ident(String),
-    Num(String),
+    Int(String),
     OpCode(String),
     Ty,
     Fn,

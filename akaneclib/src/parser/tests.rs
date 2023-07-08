@@ -123,7 +123,7 @@ fn parse_ident() {
 }
 
 #[test]
-fn parse_num() {
+fn parse_int() {
     assert_eq!(
         parse("fn f = 0"),
         &[top_fn_def_ast(
